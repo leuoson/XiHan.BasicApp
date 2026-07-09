@@ -12,6 +12,13 @@ export enum AiTaskTriggerType {
   Cron = 'Cron',
 }
 
+export enum AiTaskRunStatus {
+  Running = 'Running',
+  Success = 'Success',
+  Failed = 'Failed',
+  Canceled = 'Canceled',
+}
+
 export const AI_TASK_PROMPT_MODE_OPTIONS = [
   { label: '内联提示词', value: AiTaskPromptMode.Inline },
   { label: '提示词库', value: AiTaskPromptMode.PromptStore },
@@ -26,3 +33,10 @@ export const AI_TASK_TRIGGER_TYPE_OPTIONS = [
 
 export const AI_TASK_SCHEDULE_TRIGGER_TYPE_OPTIONS = AI_TASK_TRIGGER_TYPE_OPTIONS
   .filter(option => option.value !== AiTaskTriggerType.Immediate)
+
+export const AI_TASK_RUN_STATUS_OPTIONS = [
+  { label: '执行中', value: AiTaskRunStatus.Running },
+  { label: '成功', value: AiTaskRunStatus.Success },
+  { label: '失败', value: AiTaskRunStatus.Failed },
+  { label: '已取消', value: AiTaskRunStatus.Canceled },
+]

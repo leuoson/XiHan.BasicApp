@@ -17,6 +17,7 @@ using XiHan.BasicApp.AI.Domain.Entities;
 using XiHan.BasicApp.AI.Domain.Repositories;
 using XiHan.BasicApp.Core.Dtos;
 using XiHan.BasicApp.Saas.Domain.Enums;
+using XiHan.Framework.AI.Abstractions.Prompts;
 using XiHan.Framework.Domain.Shared.Paging.Dtos;
 using XiHan.Framework.Domain.Shared.Paging.Models;
 
@@ -26,6 +27,10 @@ internal sealed class InMemoryAiTaskRepository : IAiTaskRepository
 {
     private readonly Dictionary<long, SysAiTask> _tasksById = [];
     private readonly HashSet<string> _existingCodes = new(StringComparer.OrdinalIgnoreCase);
+
+    public InMemoryAiTaskRepository()
+    {
+    }
 
     public InMemoryAiTaskRepository(string? existingCode = null)
     {
@@ -107,6 +112,49 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(entity);
     }
+
+    public Task<SysAiTaskRun?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Runs.FirstOrDefault(run => run.BasicId == id));
+    }
+
+    public Task<IReadOnlyList<SysAiTaskRun>> GetByTaskIdAsync(long aiTaskId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<SysAiTaskRun>>(Runs
+            .Where(run => run.AiTaskId == aiTaskId)
+            .OrderByDescending(run => run.StartedTime)
+            .ToList());
+    }
+}
+
+internal sealed class FakeAiPromptStore : IAiPromptStore
+{
+    private readonly Dictionary<string, AiPromptTemplate> _prompts = new(StringComparer.OrdinalIgnoreCase);
+
+    public void Add(string name, string content, string? version = null)
+    {
+        _prompts[$"{name.Trim()}::{version?.Trim()}"] = new AiPromptTemplate
+        {
+            Name = name.Trim(),
+            Content = content,
+            Version = version
+        };
+    }
+
+    public Task<AiPromptTemplate?> GetAsync(string name, string? version = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _prompts.TryGetValue($"{name.Trim()}::{version?.Trim()}", out var prompt);
+        return Task.FromResult(prompt);
+    }
+
+    public Task<IReadOnlyList<AiPromptTemplate>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<AiPromptTemplate>>(_prompts.Values.ToList());
+    }
 }
 
 internal sealed class InMemoryAiTaskToolPolicyRepository : IAiTaskToolPolicyRepository
@@ -140,17 +188,22 @@ internal sealed class InMemoryAiTaskToolPolicyRepository : IAiTaskToolPolicyRepo
 
 internal sealed class FakeAiTaskChatService : IAiTaskChatService
 {
-    private readonly string _resultText;
+    private readonly string? _resultText;
+    private readonly Exception? _exception;
 
-    public FakeAiTaskChatService(string resultText)
+    public string? LastPrompt { get; private set; }
+
+    public FakeAiTaskChatService(string? resultText, Exception? exception = null)
     {
         _resultText = resultText;
+        _exception = exception;
     }
 
     public Task<string?> CompleteAsync(SysAiTask task, string prompt, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult<string?>(_resultText);
+        LastPrompt = prompt;
+        return _exception is null ? Task.FromResult(_resultText) : Task.FromException<string?>(_exception);
     }
 }
 

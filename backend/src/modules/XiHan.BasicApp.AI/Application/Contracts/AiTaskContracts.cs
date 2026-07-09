@@ -62,6 +62,16 @@ public interface IAiTaskQueryService : IApplicationService
     /// 获取 AI 任务详情
     /// </summary>
     Task<AiTaskDetailDto?> GetDetailAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取 AI 任务运行记录列表
+    /// </summary>
+    Task<IReadOnlyList<AiTaskRunListItemDto>> GetRunListAsync(long aiTaskId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取 AI 任务运行记录详情
+    /// </summary>
+    Task<AiTaskRunDetailDto?> GetRunDetailAsync(long id, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

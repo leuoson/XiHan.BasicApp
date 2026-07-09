@@ -32,6 +32,7 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
     private readonly IAiTaskRepository _taskRepository;
     private readonly IAiTaskToolPolicyRepository _policyRepository;
     private readonly IAiToolRepository _toolRepository;
+    private readonly IAiTaskRunRepository _runRepository;
 
     /// <summary>
     /// 构造函数
@@ -39,11 +40,13 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
     public AiTaskQueryService(
         IAiTaskRepository taskRepository,
         IAiTaskToolPolicyRepository policyRepository,
-        IAiToolRepository toolRepository)
+        IAiToolRepository toolRepository,
+        IAiTaskRunRepository runRepository)
     {
         _taskRepository = taskRepository;
         _policyRepository = policyRepository;
         _toolRepository = toolRepository;
+        _runRepository = runRepository;
     }
 
     /// <inheritdoc />
@@ -95,6 +98,36 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
         detail.CapabilityCount = policies.Count;
         detail.ToolPolicies = policies.Select(policy => AiTaskApplicationMapper.ToToolPolicyDto(policy, toolById.GetValueOrDefault(policy.ToolId))).ToList();
         return detail;
+    }
+
+    /// <inheritdoc />
+    [PermissionAuthorize(AiTaskPermissionCodes.Read)]
+    public async Task<IReadOnlyList<AiTaskRunListItemDto>> GetRunListAsync(long aiTaskId, CancellationToken cancellationToken = default)
+    {
+        if (aiTaskId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(aiTaskId), "AI 任务主键必须大于 0。");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var runs = await _runRepository.GetByTaskIdAsync(aiTaskId, cancellationToken);
+        return runs.Select(AiTaskApplicationMapper.ToRunListItemDto).ToList();
+    }
+
+    /// <inheritdoc />
+    [PermissionAuthorize(AiTaskPermissionCodes.Read)]
+    public async Task<AiTaskRunDetailDto?> GetRunDetailAsync(long id, CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), "AI 任务运行记录主键必须大于 0。");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var run = await _runRepository.GetByIdAsync(id, cancellationToken);
+        return run is null ? null : AiTaskApplicationMapper.ToRunDetailDto(run);
     }
 
     private async Task<Dictionary<long, SysAiTool>> LoadToolMapAsync(IReadOnlyList<long> toolIds, CancellationToken cancellationToken)

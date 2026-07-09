@@ -36,7 +36,7 @@ public sealed class AiTaskJobExecutorTests
         var repository = new InMemoryAiTaskRepository(task);
         var runRepository = new InMemoryAiTaskRunRepository();
         var chat = new FakeAiTaskChatService("Brief result");
-        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer());
+        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer(new FakeAiPromptStore()));
 
         var result = await executor.ExecuteAsync(7);
 
@@ -45,5 +45,58 @@ public sealed class AiTaskJobExecutorTests
         Assert.Equal(AiTaskRunStatus.Success, runRepository.Runs[0].RunStatus);
         Assert.Equal("Brief result", runRepository.Runs[0].ResultText);
         Assert.Equal("Write a short brief.", runRepository.Runs[0].PromptSnapshot);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_records_success_run_for_prompt_store_task()
+    {
+        var store = new FakeAiPromptStore();
+        store.Add("daily-summary", "Write the daily summary.", "v1");
+        var task = new SysAiTask(7)
+        {
+            AiTaskCode = "morning-news",
+            AiTaskName = "Morning News",
+            PromptMode = AiTaskPromptMode.PromptStore,
+            PromptCode = "daily-summary",
+            PromptVersion = "v1",
+            Status = EnableStatus.Enabled
+        };
+        var repository = new InMemoryAiTaskRepository(task);
+        var runRepository = new InMemoryAiTaskRunRepository();
+        var chat = new FakeAiTaskChatService("Brief result");
+        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer(store));
+
+        var result = await executor.ExecuteAsync(7);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("Write the daily summary.", chat.LastPrompt);
+        Assert.Single(runRepository.Runs);
+        Assert.Equal(AiTaskRunStatus.Success, runRepository.Runs[0].RunStatus);
+        Assert.Equal("Write the daily summary.", runRepository.Runs[0].PromptSnapshot);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_records_failed_run_when_prompt_store_prompt_is_missing()
+    {
+        var task = new SysAiTask(7)
+        {
+            AiTaskCode = "morning-news",
+            AiTaskName = "Morning News",
+            PromptMode = AiTaskPromptMode.PromptStore,
+            PromptCode = "missing-prompt",
+            Status = EnableStatus.Enabled
+        };
+        var repository = new InMemoryAiTaskRepository(task);
+        var runRepository = new InMemoryAiTaskRunRepository();
+        var chat = new FakeAiTaskChatService("Brief result");
+        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer(new FakeAiPromptStore()));
+
+        var result = await executor.ExecuteAsync(7);
+
+        Assert.False(result.Succeeded);
+        Assert.Single(runRepository.Runs);
+        Assert.Equal(AiTaskRunStatus.Failed, runRepository.Runs[0].RunStatus);
+        Assert.Equal("AI 任务引用的提示词不存在或已禁用。", runRepository.Runs[0].ErrorMessage);
+        Assert.Null(chat.LastPrompt);
     }
 }

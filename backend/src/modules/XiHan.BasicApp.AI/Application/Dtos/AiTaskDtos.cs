@@ -135,3 +135,21 @@ public sealed class AiTaskDetailDto : AiTaskListItemDto
     public List<AiTaskToolPolicyDto> ToolPolicies { get; set; } = [];
     public string? Remark { get; set; }
 }
+
+public class AiTaskRunListItemDto : BasicAppDto
+{
+    public long AiTaskId { get; set; }
+    public string AiTaskCode { get; set; } = string.Empty;
+    public DateTimeOffset StartedTime { get; set; }
+    public DateTimeOffset? EndedTime { get; set; }
+    public AiTaskRunStatus RunStatus { get; set; }
+    public long? DurationMilliseconds { get; set; }
+    public string? ErrorMessage { get; set; }
+    public DateTimeOffset CreatedTime { get; set; }
+}
+
+public sealed class AiTaskRunDetailDto : AiTaskRunListItemDto
+{
+    public string? PromptSnapshot { get; set; }
+    public string? ResultText { get; set; }
+}

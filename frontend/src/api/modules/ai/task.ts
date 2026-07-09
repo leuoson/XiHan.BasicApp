@@ -4,7 +4,9 @@ import type {
   AiTaskDetailDto,
   AiTaskExecutionResultDto,
   AiTaskListItemDto,
+  AiTaskRunDetailDto,
   AiTaskRunDto,
+  AiTaskRunListItemDto,
   AiTaskStatusUpdateDto,
   AiTaskUpdateDto,
 } from './task.types'
@@ -34,5 +36,11 @@ export const aiTaskApi = {
   },
   detail(id: ApiId) {
     return query.get<AiTaskDetailDto | null>(`Detail/${formatDynamicApiRouteValue(id)}`)
+  },
+  runList(taskId: ApiId) {
+    return query.get<AiTaskRunListItemDto[]>(`RunList/${formatDynamicApiRouteValue(taskId)}`)
+  },
+  runDetail(runId: ApiId) {
+    return query.get<AiTaskRunDetailDto | null>(`RunDetail/${formatDynamicApiRouteValue(runId)}`)
   },
 }

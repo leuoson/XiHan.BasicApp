@@ -23,4 +23,34 @@ namespace XiHan.BasicApp.AI.Infrastructure.Repositories;
 /// AI 任务运行记录仓储实现
 /// </summary>
 public sealed class AiTaskRunRepository(ISqlSugarClientResolver clientResolver)
-    : SaasRepository<SysAiTaskRun>(clientResolver), IAiTaskRunRepository;
+    : SaasRepository<SysAiTaskRun>(clientResolver), IAiTaskRunRepository
+{
+    /// <inheritdoc />
+    public new async Task<SysAiTaskRun?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), "AI 任务运行记录主键必须大于 0。");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await CreateQueryable()
+            .Where(run => run.BasicId == id)
+            .FirstAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SysAiTaskRun>> GetByTaskIdAsync(long aiTaskId, CancellationToken cancellationToken = default)
+    {
+        if (aiTaskId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(aiTaskId), "AI 任务主键必须大于 0。");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await CreateQueryable()
+            .Where(run => run.AiTaskId == aiTaskId)
+            .OrderByDescending(run => run.StartedTime)
+            .ToListAsync(cancellationToken);
+    }
+}

@@ -59,19 +59,20 @@ public sealed class AiTaskExecutor
             throw new InvalidOperationException("AI 任务已禁用。");
         }
 
-        var stopwatch = Stopwatch.StartNew();
-        var prompt = _promptRenderer.Render(task);
         var run = await _runRepository.AddAsync(new SysAiTaskRun
         {
             AiTaskId = task.BasicId,
             AiTaskCode = task.AiTaskCode,
             StartedTime = DateTimeOffset.Now,
-            RunStatus = AiTaskRunStatus.Running,
-            PromptSnapshot = prompt
+            RunStatus = AiTaskRunStatus.Running
         }, cancellationToken);
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
+            var prompt = await _promptRenderer.RenderAsync(task, cancellationToken);
+            run.PromptSnapshot = prompt;
+
             var resultText = await _chatService.CompleteAsync(task, prompt, cancellationToken);
             stopwatch.Stop();
 

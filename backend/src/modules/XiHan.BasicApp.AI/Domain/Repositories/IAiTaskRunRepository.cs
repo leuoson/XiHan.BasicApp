@@ -30,4 +30,14 @@ public interface IAiTaskRunRepository
     /// 更新
     /// </summary>
     Task<SysAiTaskRun> UpdateAsync(SysAiTaskRun entity, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 根据主键获取运行记录
+    /// </summary>
+    Task<SysAiTaskRun?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 根据 AI 任务主键获取运行记录
+    /// </summary>
+    Task<IReadOnlyList<SysAiTaskRun>> GetByTaskIdAsync(long aiTaskId, CancellationToken cancellationToken = default);
 }

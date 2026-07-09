@@ -5,6 +5,8 @@ import type {
   AiTaskCreateDto,
   AiTaskDetailDto,
   AiTaskListItemDto,
+  AiTaskRunDetailDto,
+  AiTaskRunListItemDto,
   AiTaskToolPolicyInputDto,
   AiTaskUpdateDto,
   AiToolSelectItemDto,
@@ -16,6 +18,8 @@ import {
   NButton,
   NDataTable,
   NDatePicker,
+  NDrawer,
+  NDrawerContent,
   NForm,
   NFormItem,
   NInput,
@@ -32,6 +36,7 @@ import { computed, h, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   AI_TASK_PROMPT_MODE_OPTIONS,
+  AI_TASK_RUN_STATUS_OPTIONS,
   AI_TASK_SCHEDULE_TRIGGER_TYPE_OPTIONS,
   AI_TASK_TRIGGER_TYPE_OPTIONS,
   AI_TOOL_RISK_LEVEL_OPTIONS,
@@ -41,6 +46,7 @@ import {
   aiTaskApi,
   aiToolApi,
   AiTaskPromptMode,
+  AiTaskRunStatus,
   EnableStatus,
   AiTaskTriggerType,
   createPageRequest,
@@ -92,12 +98,20 @@ const tools = ref<AiToolSelectItemDto[]>([])
 const schemaPageRef = ref<{ reload: () => Promise<void> } | null>(null)
 const modalVisible = ref(false)
 const skillPickerVisible = ref(false)
+const runHistoryVisible = ref(false)
+const runHistoryLoading = ref(false)
 const editingStatus = ref<EnableStatus | null>(null)
 const skillPickerSelection = ref<string[]>([])
 const skillPickerKeyword = ref('')
 const form = ref<TaskFormModel>(createDefaultForm())
+const runHistoryRows = ref<AiTaskRunListItemDto[]>([])
+const runHistoryDetail = ref<AiTaskRunDetailDto | null>(null)
+const runHistoryTask = ref<AiTaskListItemDto | null>(null)
 
 const modalTitle = computed(() => (form.value.basicId ? t('develop.ai_task.modal_edit_title') : t('develop.ai_task.modal_add_title')))
+const runHistoryTitle = computed(() => runHistoryTask.value
+  ? `${t('develop.ai_task.run_history_title')} - ${runHistoryTask.value.aiTaskName}`
+  : t('develop.ai_task.run_history_title'))
 
 function reload() {
   void schemaPageRef.value?.reload()
@@ -237,6 +251,7 @@ const schema = computed<PageSchema>(() => ({
   actions: [
     { key: 'create', title: t('develop.ai_task.add'), scope: 'page', type: 'primary', icon: 'lucide:plus' },
     { key: 'run', title: t('develop.ai_task.action_run'), scope: 'row', type: 'info', icon: 'lucide:play' },
+    { key: 'history', title: t('develop.ai_task.action_history'), scope: 'row', icon: 'lucide:list-clock' },
     { key: 'enable', title: t('common.actions.enable'), scope: 'row', icon: 'lucide:power', visible: row => (row as unknown as AiTaskListItemDto).status !== EnableStatus.Enabled },
     { key: 'disable', title: t('common.actions.disable'), scope: 'row', icon: 'lucide:power-off', visible: row => (row as unknown as AiTaskListItemDto).status === EnableStatus.Enabled },
     { key: 'edit', title: t('common.actions.edit'), scope: 'row', icon: 'lucide:pencil' },
@@ -361,6 +376,41 @@ const skillPickerColumns = computed<DataTableColumns<AiToolSelectItemDto>>(() =>
     width: 120,
     render(row) {
       return h(NTag, { size: 'small', round: true, bordered: false, type: 'info' }, () => getOptionLabel(AI_TOOL_SAFETY_LEVEL_OPTIONS, row.safetyLevel))
+    },
+  },
+])
+const runHistoryColumns = computed<DataTableColumns<AiTaskRunListItemDto>>(() => [
+  {
+    title: t('develop.ai_task.run_col_status'),
+    key: 'runStatus',
+    width: 100,
+    render(row) {
+      return h(NTag, { size: 'small', round: true, bordered: false, type: getRunStatusTagType(row.runStatus) }, () =>
+        getOptionLabel(AI_TASK_RUN_STATUS_OPTIONS, row.runStatus))
+    },
+  },
+  {
+    title: t('develop.ai_task.run_col_started'),
+    key: 'startedTime',
+    minWidth: 170,
+    render(row) {
+      return formatDateTime(row.startedTime)
+    },
+  },
+  {
+    title: t('develop.ai_task.run_col_duration'),
+    key: 'durationMilliseconds',
+    width: 100,
+    render(row) {
+      return formatDuration(row.durationMilliseconds)
+    },
+  },
+  {
+    title: t('common.fields.actions'),
+    key: 'actions',
+    width: 90,
+    render(row) {
+      return h(NButton, { size: 'small', onClick: () => selectRunHistory(row) }, () => t('common.actions.detail'))
     },
   },
 ])
@@ -561,6 +611,11 @@ function onAction(payload: SchemaActionPayload) {
         void handleRun(row)
       }
       break
+    case 'history':
+      if (row) {
+        void openRunHistory(row)
+      }
+      break
     case 'enable':
     case 'disable':
       if (row) {
@@ -658,11 +713,82 @@ async function handleRun(row: AiTaskListItemDto) {
     else {
       message.error(result.errorMessage || t('develop.ai_task.run_failed'))
     }
+    if (runHistoryVisible.value && runHistoryTask.value?.basicId === row.basicId) {
+      await loadRunHistory(row.basicId)
+    }
   }
   catch {
     reset.destroy()
     message.error(t('develop.ai_task.run_failed'))
   }
+}
+
+async function openRunHistory(row: AiTaskListItemDto) {
+  runHistoryTask.value = row
+  runHistoryVisible.value = true
+  await loadRunHistory(row.basicId)
+}
+
+async function loadRunHistory(taskId: AiTaskListItemDto['basicId']) {
+  runHistoryLoading.value = true
+  try {
+    const rows = await aiTaskApi.runList(taskId)
+    runHistoryRows.value = rows
+    const selected = rows.find(row => row.basicId === runHistoryDetail.value?.basicId) ?? rows[0]
+    runHistoryDetail.value = selected ? await aiTaskApi.runDetail(selected.basicId) : null
+  }
+  catch {
+    message.error(t('develop.ai_task.load_run_history_failed'))
+  }
+  finally {
+    runHistoryLoading.value = false
+  }
+}
+
+async function selectRunHistory(row: AiTaskRunListItemDto) {
+  runHistoryLoading.value = true
+  try {
+    runHistoryDetail.value = await aiTaskApi.runDetail(row.basicId)
+  }
+  catch {
+    message.error(t('develop.ai_task.load_run_history_failed'))
+  }
+  finally {
+    runHistoryLoading.value = false
+  }
+}
+
+function getRunStatusTagType(status: AiTaskRunStatus) {
+  switch (status) {
+    case AiTaskRunStatus.Success:
+      return 'success'
+    case AiTaskRunStatus.Failed:
+      return 'error'
+    case AiTaskRunStatus.Canceled:
+      return 'warning'
+    default:
+      return 'info'
+  }
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return '-'
+  }
+
+  return new Date(value).toLocaleString()
+}
+
+function formatDuration(value?: number | null) {
+  if (value === undefined || value === null) {
+    return '-'
+  }
+
+  if (value < 1000) {
+    return `${value}ms`
+  }
+
+  return `${(value / 1000).toFixed(1)}s`
 }
 
 async function handleToggleStatus(row: AiTaskListItemDto) {
@@ -900,6 +1026,73 @@ onMounted(() => {
         </NSpace>
       </template>
     </NModal>
+
+    <NDrawer
+      v-model:show="runHistoryVisible"
+      :width="720"
+      placement="right"
+    >
+      <NDrawerContent :title="runHistoryTitle" closable>
+        <NSpace vertical :size="16">
+          <NDataTable
+            :columns="runHistoryColumns"
+            :data="runHistoryRows"
+            :loading="runHistoryLoading"
+            :pagination="{ pageSize: 8 }"
+            :row-key="(row: AiTaskRunListItemDto) => row.basicId"
+            size="small"
+          />
+
+          <div v-if="runHistoryDetail" class="ai-task-run-detail">
+            <div class="ai-task-run-meta">
+              <div class="ai-task-run-meta__item">
+                <span>{{ t('common.fields.status') }}</span>
+                <NTag size="small" round :bordered="false" :type="getRunStatusTagType(runHistoryDetail.runStatus)">
+                  {{ getOptionLabel(AI_TASK_RUN_STATUS_OPTIONS, runHistoryDetail.runStatus) }}
+                </NTag>
+              </div>
+              <div class="ai-task-run-meta__item">
+                <span>{{ t('develop.ai_task.run_col_started') }}</span>
+                <strong>{{ formatDateTime(runHistoryDetail.startedTime) }}</strong>
+              </div>
+              <div class="ai-task-run-meta__item">
+                <span>{{ t('develop.ai_task.run_col_ended') }}</span>
+                <strong>{{ formatDateTime(runHistoryDetail.endedTime) }}</strong>
+              </div>
+              <div class="ai-task-run-meta__item">
+                <span>{{ t('develop.ai_task.run_col_duration') }}</span>
+                <strong>{{ formatDuration(runHistoryDetail.durationMilliseconds) }}</strong>
+              </div>
+            </div>
+
+            <section class="ai-task-run-block">
+              <div class="ai-task-section-title">
+                {{ t('develop.ai_task.run_detail_prompt') }}
+              </div>
+              <pre>{{ runHistoryDetail.promptSnapshot || '-' }}</pre>
+            </section>
+
+            <section class="ai-task-run-block">
+              <div class="ai-task-section-title">
+                {{ t('develop.ai_task.run_detail_result') }}
+              </div>
+              <pre>{{ runHistoryDetail.resultText || '-' }}</pre>
+            </section>
+
+            <section v-if="runHistoryDetail.errorMessage" class="ai-task-run-block">
+              <div class="ai-task-section-title">
+                {{ t('develop.ai_task.run_detail_error') }}
+              </div>
+              <pre>{{ runHistoryDetail.errorMessage }}</pre>
+            </section>
+          </div>
+
+          <div v-else class="ai-task-run-empty">
+            {{ t('develop.ai_task.run_history_empty') }}
+          </div>
+        </NSpace>
+      </NDrawerContent>
+    </NDrawer>
   </SchemaPage>
 </template>
 
@@ -950,7 +1143,65 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.ai-task-run-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ai-task-run-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.ai-task-run-meta__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ai-task-run-meta__item span {
+  color: var(--n-text-color-3);
+  font-size: 12px;
+}
+
+.ai-task-run-meta__item strong {
+  color: var(--n-text-color);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ai-task-run-block {
+  min-width: 0;
+}
+
+.ai-task-run-block pre {
+  max-height: 220px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+  background: var(--n-color);
+  color: var(--n-text-color);
+  font-family: var(--n-font-family-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-task-run-empty {
+  padding: 18px 0;
+  color: var(--n-text-color-3);
+  text-align: center;
+}
+
 @media (max-width: 760px) {
+  .ai-task-run-meta,
   .ai-task-form-grid--compact,
   .ai-task-form-grid {
     grid-template-columns: 1fr;

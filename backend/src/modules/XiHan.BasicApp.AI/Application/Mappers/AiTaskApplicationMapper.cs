@@ -296,6 +296,51 @@ public static class AiTaskApplicationMapper
     }
 
     /// <summary>
+    /// 运行记录实体映射为列表项 DTO
+    /// </summary>
+    public static AiTaskRunListItemDto ToRunListItemDto(SysAiTaskRun entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        return new AiTaskRunListItemDto
+        {
+            BasicId = entity.BasicId,
+            AiTaskId = entity.AiTaskId,
+            AiTaskCode = entity.AiTaskCode,
+            StartedTime = entity.StartedTime,
+            EndedTime = entity.EndedTime,
+            RunStatus = entity.RunStatus,
+            DurationMilliseconds = entity.DurationMilliseconds,
+            ErrorMessage = entity.ErrorMessage,
+            CreatedTime = entity.CreatedTime
+        };
+    }
+
+    /// <summary>
+    /// 运行记录实体映射为详情 DTO
+    /// </summary>
+    public static AiTaskRunDetailDto ToRunDetailDto(SysAiTaskRun entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var item = ToRunListItemDto(entity);
+        return new AiTaskRunDetailDto
+        {
+            BasicId = item.BasicId,
+            AiTaskId = item.AiTaskId,
+            AiTaskCode = item.AiTaskCode,
+            StartedTime = item.StartedTime,
+            EndedTime = item.EndedTime,
+            RunStatus = item.RunStatus,
+            DurationMilliseconds = item.DurationMilliseconds,
+            ErrorMessage = item.ErrorMessage,
+            CreatedTime = item.CreatedTime,
+            PromptSnapshot = entity.PromptSnapshot,
+            ResultText = entity.ResultText
+        };
+    }
+
+    /// <summary>
     /// 获取内部 SysTask 编码
     /// </summary>
     public static string ToBackingTaskCode(string aiTaskCode)

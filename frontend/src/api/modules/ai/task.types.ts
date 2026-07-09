@@ -1,6 +1,6 @@
 import type { ApiId, BasicDto, DateTimeString } from '../../types'
 import type { EnableStatus } from '../shared'
-import type { AiTaskPromptMode, AiTaskTriggerType } from './task.enums'
+import type { AiTaskPromptMode, AiTaskRunStatus, AiTaskTriggerType } from './task.enums'
 import type { AiToolRiskLevel, AiToolSafetyLevel, AiToolType } from './tool.enums'
 
 export { EnableStatus } from '../shared'
@@ -95,4 +95,20 @@ export interface AiTaskExecutionResultDto {
   succeeded: boolean
   resultText?: string | null
   errorMessage?: string | null
+}
+
+export interface AiTaskRunListItemDto extends BasicDto {
+  aiTaskId: ApiId
+  aiTaskCode: string
+  startedTime: DateTimeString
+  endedTime?: DateTimeString | null
+  runStatus: AiTaskRunStatus
+  durationMilliseconds?: number | null
+  errorMessage?: string | null
+  createdTime: DateTimeString
+}
+
+export interface AiTaskRunDetailDto extends AiTaskRunListItemDto {
+  promptSnapshot?: string | null
+  resultText?: string | null
 }
