@@ -45,7 +45,6 @@ public sealed class AiTaskApplicationMapperTests
                 new AiTaskToolPolicyInputDto
                 {
                     ToolId = 11,
-                    IsEnabled = true,
                     Remark = "Allow knowledge"
                 }
             ]
@@ -55,7 +54,7 @@ public sealed class AiTaskApplicationMapperTests
 
         Assert.Single(command.ToolPolicies);
         Assert.Equal(11, command.ToolPolicies[0].ToolId);
-        Assert.True(command.ToolPolicies[0].IsEnabled);
+        Assert.Equal("Allow knowledge", command.ToolPolicies[0].Remark);
     }
 
     [Fact]

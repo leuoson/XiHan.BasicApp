@@ -31,7 +31,6 @@ public sealed class AiTaskCreateDto
     public string? PromptText { get; set; }
     public string? PromptCode { get; set; }
     public string? PromptVersion { get; set; }
-    public string? InputVariablesJson { get; set; }
     public long? ProviderId { get; set; }
     public TriggerType TriggerType { get; set; } = TriggerType.Cron;
     public string? CronExpression { get; set; }
@@ -58,7 +57,6 @@ public sealed class AiTaskUpdateDto : BasicAppUDto
     public string? PromptText { get; set; }
     public string? PromptCode { get; set; }
     public string? PromptVersion { get; set; }
-    public string? InputVariablesJson { get; set; }
     public long? ProviderId { get; set; }
     public TriggerType TriggerType { get; set; } = TriggerType.Cron;
     public string? CronExpression { get; set; }
@@ -88,7 +86,6 @@ public sealed class AiTaskRunDto : BasicAppDto
 public sealed class AiTaskToolPolicyInputDto
 {
     public long ToolId { get; set; }
-    public bool IsEnabled { get; set; } = true;
     public string? Remark { get; set; }
 }
 
@@ -100,7 +97,6 @@ public sealed class AiTaskToolPolicyDto : BasicAppDto
     public AiToolType ToolType { get; set; }
     public AiToolRiskLevel RiskLevel { get; set; }
     public AiToolSafetyLevel SafetyLevel { get; set; }
-    public bool IsEnabled { get; set; }
     public bool IsAvailable { get; set; }
     public string? Remark { get; set; }
 }
@@ -134,7 +130,6 @@ public sealed class AiTaskDetailDto : AiTaskListItemDto
     public string? PromptText { get; set; }
     public string? PromptCode { get; set; }
     public string? PromptVersion { get; set; }
-    public string? InputVariablesJson { get; set; }
     public DateTimeOffset? StartTime { get; set; }
     public DateTimeOffset? EndTime { get; set; }
     public List<AiTaskToolPolicyDto> ToolPolicies { get; set; } = [];

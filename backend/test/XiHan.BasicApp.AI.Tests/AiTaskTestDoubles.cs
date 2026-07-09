@@ -168,15 +168,10 @@ internal sealed class InMemoryAiToolRepository : IAiToolRepository
                 ToolName = tool.ToolName,
                 ToolType = tool.ToolType,
                 SourceKey = tool.SourceKey,
-                SkillName = tool.SkillName,
                 Category = tool.Category,
                 Description = tool.Description,
-                InputSchemaJson = tool.InputSchemaJson,
-                OutputSchemaJson = tool.OutputSchemaJson,
                 RiskLevel = tool.RiskLevel,
                 SafetyLevel = tool.SafetyLevel,
-                RequiresApproval = tool.RequiresApproval,
-                DefaultMaxCalls = tool.DefaultMaxCalls,
                 Status = tool.Status,
                 Remark = tool.Remark
             };

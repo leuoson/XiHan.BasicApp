@@ -12,7 +12,6 @@
 
 #endregion <<版权版本注释>>
 
-using System.Text.Json;
 using XiHan.BasicApp.AI.Domain.Entities;
 using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.BasicApp.AI.Domain.Repositories;
@@ -64,8 +63,6 @@ public sealed class AiTaskDomainService : IAiTaskDomainService
             PromptText = NormalizePromptText(command.PromptMode, command.PromptText),
             PromptCode = NormalizePromptCode(command.PromptMode, command.PromptCode),
             PromptVersion = Optional(command.PromptVersion, 100, nameof(command.PromptVersion), "提示词版本不能超过 100 个字符。"),
-            InputVariablesJson = OptionalJson(command.InputVariablesJson, "输入变量必须是有效 JSON。"),
-            AgentMode = AiTaskAgentMode.PlainChat,
             ProviderId = command.ProviderId,
             TriggerType = command.TriggerType,
             CronExpression = Optional(command.CronExpression, 100, nameof(command.CronExpression), "Cron 表达式不能超过 100 个字符。"),
@@ -104,8 +101,6 @@ public sealed class AiTaskDomainService : IAiTaskDomainService
         task.PromptText = NormalizePromptText(command.PromptMode, command.PromptText);
         task.PromptCode = NormalizePromptCode(command.PromptMode, command.PromptCode);
         task.PromptVersion = Optional(command.PromptVersion, 100, nameof(command.PromptVersion), "提示词版本不能超过 100 个字符。");
-        task.InputVariablesJson = OptionalJson(command.InputVariablesJson, "输入变量必须是有效 JSON。");
-        task.AgentMode = AiTaskAgentMode.PlainChat;
         task.ProviderId = command.ProviderId;
         task.TriggerType = command.TriggerType;
         task.CronExpression = Optional(command.CronExpression, 100, nameof(command.CronExpression), "Cron 表达式不能超过 100 个字符。");
@@ -241,11 +236,6 @@ public sealed class AiTaskDomainService : IAiTaskDomainService
         return string.IsNullOrWhiteSpace(promptText) ? null : promptText;
     }
 
-    private static string? NormalizeNullable(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
     private static string? Optional(string? value, int maxLength, string paramName, string message)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -257,26 +247,6 @@ public sealed class AiTaskDomainService : IAiTaskDomainService
         if (normalized.Length > maxLength)
         {
             throw new ArgumentOutOfRangeException(paramName, message);
-        }
-
-        return normalized;
-    }
-
-    private static string? OptionalJson(string? value, string message)
-    {
-        var normalized = NormalizeNullable(value);
-        if (normalized is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            using var _ = JsonDocument.Parse(normalized);
-        }
-        catch (JsonException exception)
-        {
-            throw new InvalidOperationException(message, exception);
         }
 
         return normalized;

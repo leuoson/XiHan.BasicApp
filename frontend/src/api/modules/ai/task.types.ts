@@ -14,7 +14,6 @@ export interface AiTaskCreateDto {
   promptText?: string | null
   promptCode?: string | null
   promptVersion?: string | null
-  inputVariablesJson?: string | null
   providerId?: ApiId | null
   triggerType: AiTaskTriggerType
   cronExpression?: string | null
@@ -45,7 +44,6 @@ export interface AiTaskRunDto extends BasicDto {
 
 export interface AiTaskToolPolicyInputDto {
   toolId: ApiId
-  isEnabled: boolean
   remark?: string | null
 }
 
@@ -56,7 +54,6 @@ export interface AiTaskToolPolicyDto extends BasicDto {
   toolType: AiToolType
   riskLevel: AiToolRiskLevel
   safetyLevel: AiToolSafetyLevel
-  isEnabled: boolean
   isAvailable: boolean
   remark?: string | null
 }
@@ -88,7 +85,6 @@ export interface AiTaskDetailDto extends AiTaskListItemDto {
   promptText?: string | null
   promptCode?: string | null
   promptVersion?: string | null
-  inputVariablesJson?: string | null
   startTime?: DateTimeString | null
   endTime?: DateTimeString | null
   toolPolicies: AiTaskToolPolicyDto[]

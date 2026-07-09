@@ -31,7 +31,6 @@ public sealed record AiTaskCreateCommand(
     string? PromptText,
     string? PromptCode,
     string? PromptVersion,
-    string? InputVariablesJson,
     TriggerType TriggerType,
     string? CronExpression,
     DateTimeOffset? StartTime,
@@ -60,7 +59,6 @@ public sealed record AiTaskUpdateCommand(
     string? PromptText,
     string? PromptCode,
     string? PromptVersion,
-    string? InputVariablesJson,
     TriggerType TriggerType,
     string? CronExpression,
     DateTimeOffset? StartTime,
@@ -81,7 +79,6 @@ public sealed record AiTaskUpdateCommand(
 /// </summary>
 public sealed record AiTaskToolPolicyCommand(
     long ToolId,
-    bool IsEnabled,
     string? Remark);
 
 /// <summary>

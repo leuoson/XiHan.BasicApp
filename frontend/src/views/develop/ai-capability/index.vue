@@ -12,11 +12,9 @@ import {
   NForm,
   NFormItem,
   NInput,
-  NInputNumber,
   NModal,
   NSelect,
   NSpace,
-  NSwitch,
   NTag,
   useMessage,
 } from 'naive-ui'
@@ -49,12 +47,8 @@ interface CapabilityFormModel {
   sourceKey: string
   category?: string | null
   description?: string | null
-  inputSchemaJson?: string | null
-  outputSchemaJson?: string | null
   riskLevel: AiToolRiskLevel
   safetyLevel: AiToolSafetyLevel
-  requiresApproval: boolean
-  defaultMaxCalls: number
   status: EnableStatus
   remark?: string | null
 }
@@ -156,12 +150,8 @@ function createDefaultForm(): CapabilityFormModel {
     sourceKey: '',
     category: null,
     description: null,
-    inputSchemaJson: null,
-    outputSchemaJson: null,
     riskLevel: AiToolRiskLevel.Low,
     safetyLevel: AiToolSafetyLevel.ReadOnly,
-    requiresApproval: false,
-    defaultMaxCalls: 5,
     status: EnableStatus.Enabled,
     remark: null,
   }
@@ -213,12 +203,8 @@ function detailToForm(detail: AiToolDetailDto): CapabilityFormModel {
     sourceKey: detail.sourceKey,
     category: detail.category ?? null,
     description: detail.description ?? null,
-    inputSchemaJson: detail.inputSchemaJson ?? null,
-    outputSchemaJson: detail.outputSchemaJson ?? null,
     riskLevel: detail.riskLevel,
     safetyLevel: detail.safetyLevel,
-    requiresApproval: detail.requiresApproval,
-    defaultMaxCalls: detail.defaultMaxCalls,
     status: detail.status,
     remark: detail.remark ?? null,
   }
@@ -253,12 +239,8 @@ async function handleSubmit() {
         toolName: form.value.toolName.trim(),
         category: form.value.category?.trim() || null,
         description: form.value.description?.trim() || null,
-        inputSchemaJson: form.value.inputSchemaJson?.trim() || null,
-        outputSchemaJson: form.value.outputSchemaJson?.trim() || null,
         riskLevel: form.value.riskLevel,
         safetyLevel: form.value.safetyLevel,
-        requiresApproval: form.value.requiresApproval,
-        defaultMaxCalls: form.value.defaultMaxCalls,
         remark: form.value.remark?.trim() || null,
       }
       await aiToolApi.update(updateInput)
@@ -271,12 +253,8 @@ async function handleSubmit() {
         sourceKey: form.value.sourceKey.trim(),
         category: form.value.category?.trim() || null,
         description: form.value.description?.trim() || null,
-        inputSchemaJson: form.value.inputSchemaJson?.trim() || null,
-        outputSchemaJson: form.value.outputSchemaJson?.trim() || null,
         riskLevel: form.value.riskLevel,
         safetyLevel: form.value.safetyLevel,
-        requiresApproval: form.value.requiresApproval,
-        defaultMaxCalls: form.value.defaultMaxCalls,
         status: form.value.status,
         remark: form.value.remark?.trim() || null,
       }
@@ -340,26 +318,11 @@ async function handleSubmit() {
         <NFormItem :label="t('develop.ai_capability.form_safety')">
           <NSelect v-model:value="form.safetyLevel" :options="AI_TOOL_SAFETY_LEVEL_OPTIONS" />
         </NFormItem>
-        <NFormItem :label="t('develop.ai_capability.form_default_max_calls')">
-          <NInputNumber v-model:value="form.defaultMaxCalls" :min="0" style="width: 100%" />
-        </NFormItem>
-        <NFormItem :label="t('develop.ai_capability.form_requires_approval')">
-          <NSwitch v-model:value="form.requiresApproval" />
-        </NFormItem>
         <NFormItem :label="t('common.fields.status')">
           <NSelect v-model:value="form.status" :options="statusEnumOptions" />
         </NFormItem>
         <NFormItem class="xh-form-full" :label="t('develop.ai_capability.form_description')">
           <NInput v-model:value="form.description" clearable type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" />
-        </NFormItem>
-        <div class="xh-form-section-title">
-          {{ t('develop.ai_capability.section_schema') }}
-        </div>
-        <NFormItem class="xh-form-full" :label="t('develop.ai_capability.form_input_schema')">
-          <NInput v-model:value="form.inputSchemaJson" clearable type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
-        </NFormItem>
-        <NFormItem class="xh-form-full" :label="t('develop.ai_capability.form_output_schema')">
-          <NInput v-model:value="form.outputSchemaJson" clearable type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
         </NFormItem>
         <NFormItem class="xh-form-full" :label="t('develop.ai_capability.form_remark')">
           <NInput v-model:value="form.remark" clearable type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" />

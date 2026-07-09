@@ -38,7 +38,6 @@ public sealed class AiTaskDomainServiceTests
             "Summarize news",
             null,
             null,
-            null,
             TriggerType.Cron,
             "0 0 9 * * ?",
             null,

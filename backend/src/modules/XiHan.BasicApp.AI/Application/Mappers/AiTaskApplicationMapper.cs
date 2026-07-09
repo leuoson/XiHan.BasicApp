@@ -120,7 +120,6 @@ public static class AiTaskApplicationMapper
             input.PromptText,
             input.PromptCode,
             input.PromptVersion,
-            input.InputVariablesJson,
             input.TriggerType,
             input.CronExpression,
             input.StartTime,
@@ -154,7 +153,6 @@ public static class AiTaskApplicationMapper
             input.PromptText,
             input.PromptCode,
             input.PromptVersion,
-            input.InputVariablesJson,
             input.TriggerType,
             input.CronExpression,
             input.StartTime,
@@ -188,7 +186,6 @@ public static class AiTaskApplicationMapper
         ArgumentNullException.ThrowIfNull(input);
         return new AiTaskToolPolicyCommand(
             input.ToolId,
-            input.IsEnabled,
             input.Remark);
     }
 
@@ -257,7 +254,6 @@ public static class AiTaskApplicationMapper
             PromptText = entity.PromptText,
             PromptCode = entity.PromptCode,
             PromptVersion = entity.PromptVersion,
-            InputVariablesJson = entity.InputVariablesJson,
             StartTime = entity.StartTime,
             EndTime = entity.EndTime,
             Remark = entity.Remark
@@ -280,7 +276,6 @@ public static class AiTaskApplicationMapper
             ToolType = tool?.ToolType ?? AiToolType.BuiltInSkill,
             RiskLevel = tool?.RiskLevel ?? AiToolRiskLevel.Low,
             SafetyLevel = tool?.SafetyLevel ?? AiToolSafetyLevel.ReadOnly,
-            IsEnabled = policy.IsEnabled,
             IsAvailable = tool?.Status == EnableStatus.Enabled,
             Remark = policy.Remark
         };

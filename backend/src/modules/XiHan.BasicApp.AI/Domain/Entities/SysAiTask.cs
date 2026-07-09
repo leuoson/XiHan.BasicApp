@@ -95,18 +95,6 @@ public partial class SysAiTask : BasicAppFullAuditedEntity
     public virtual string? PromptVersion { get; set; }
 
     /// <summary>
-    /// 输入变量 JSON
-    /// </summary>
-    [SugarColumn(ColumnName = "Input_Variables_Json", ColumnDescription = "输入变量JSON", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
-    public virtual string? InputVariablesJson { get; set; }
-
-    /// <summary>
-    /// 执行模式
-    /// </summary>
-    [SugarColumn(ColumnName = "Agent_Mode", ColumnDescription = "执行模式")]
-    public virtual AiTaskAgentMode AgentMode { get; set; } = AiTaskAgentMode.PlainChat;
-
-    /// <summary>
     /// AI 服务提供商主键
     /// </summary>
     [SugarColumn(ColumnName = "Provider_Id", ColumnDescription = "AI服务提供商主键", IsNullable = true)]

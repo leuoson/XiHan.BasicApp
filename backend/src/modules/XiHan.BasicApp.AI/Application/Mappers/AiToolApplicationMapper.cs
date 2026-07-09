@@ -37,12 +37,8 @@ public static class AiToolApplicationMapper
             input.SourceKey,
             input.Category,
             input.Description,
-            input.InputSchemaJson,
-            input.OutputSchemaJson,
             input.RiskLevel,
             input.SafetyLevel,
-            input.RequiresApproval,
-            input.DefaultMaxCalls,
             input.Status,
             input.Remark);
     }
@@ -59,12 +55,8 @@ public static class AiToolApplicationMapper
             input.ToolName,
             input.Category,
             input.Description,
-            input.InputSchemaJson,
-            input.OutputSchemaJson,
             input.RiskLevel,
             input.SafetyLevel,
-            input.RequiresApproval,
-            input.DefaultMaxCalls,
             input.Remark);
     }
 
@@ -95,8 +87,6 @@ public static class AiToolApplicationMapper
             Description = entity.Description,
             RiskLevel = entity.RiskLevel,
             SafetyLevel = entity.SafetyLevel,
-            RequiresApproval = entity.RequiresApproval,
-            DefaultMaxCalls = entity.DefaultMaxCalls,
             Status = entity.Status,
             CreatedTime = entity.CreatedTime,
             ModifiedTime = entity.ModifiedTime
@@ -122,13 +112,9 @@ public static class AiToolApplicationMapper
             Description = item.Description,
             RiskLevel = item.RiskLevel,
             SafetyLevel = item.SafetyLevel,
-            RequiresApproval = item.RequiresApproval,
-            DefaultMaxCalls = item.DefaultMaxCalls,
             Status = item.Status,
             CreatedTime = item.CreatedTime,
             ModifiedTime = item.ModifiedTime,
-            InputSchemaJson = entity.InputSchemaJson,
-            OutputSchemaJson = entity.OutputSchemaJson,
             Remark = entity.Remark
         };
     }
@@ -147,9 +133,7 @@ public static class AiToolApplicationMapper
             ToolName = entity.ToolName,
             ToolType = entity.ToolType,
             RiskLevel = entity.RiskLevel,
-            SafetyLevel = entity.SafetyLevel,
-            RequiresApproval = entity.RequiresApproval,
-            DefaultMaxCalls = entity.DefaultMaxCalls
+            SafetyLevel = entity.SafetyLevel
         };
     }
 }

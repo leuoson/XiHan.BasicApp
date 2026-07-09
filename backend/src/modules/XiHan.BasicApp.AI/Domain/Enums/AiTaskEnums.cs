@@ -35,48 +35,6 @@ public enum AiTaskPromptMode
 }
 
 /// <summary>
-/// AI 任务执行模式
-/// </summary>
-public enum AiTaskAgentMode
-{
-    /// <summary>
-    /// 普通聊天
-    /// </summary>
-    [Description("普通聊天")]
-    PlainChat = 0,
-
-    /// <summary>
-    /// 工具增强 Agent
-    /// </summary>
-    [Description("工具增强 Agent")]
-    ToolAgent = 1
-}
-
-/// <summary>
-/// AI 任务工具访问策略
-/// </summary>
-public enum AiTaskToolAccessMode
-{
-    /// <summary>
-    /// 不允许使用工具
-    /// </summary>
-    [Description("不允许")]
-    Deny = 0,
-
-    /// <summary>
-    /// 可使用
-    /// </summary>
-    [Description("允许")]
-    Allow = 1,
-
-    /// <summary>
-    /// 需要确认
-    /// </summary>
-    [Description("需要确认")]
-    RequireApproval = 2
-}
-
-/// <summary>
 /// AI 技能来源类型
 /// </summary>
 public enum AiToolType

@@ -20,16 +20,12 @@ export interface AiToolListItemDto extends BasicDto {
   description?: string | null
   riskLevel: AiToolRiskLevel
   safetyLevel: AiToolSafetyLevel
-  requiresApproval: boolean
-  defaultMaxCalls: number
   status: EnableStatus
   createdTime: DateTimeString
   modifiedTime?: DateTimeString | null
 }
 
 export interface AiToolDetailDto extends AiToolListItemDto {
-  inputSchemaJson?: string | null
-  outputSchemaJson?: string | null
   remark?: string | null
 }
 
@@ -39,8 +35,6 @@ export interface AiToolSelectItemDto extends BasicDto {
   toolType: AiToolType
   riskLevel: AiToolRiskLevel
   safetyLevel: AiToolSafetyLevel
-  requiresApproval: boolean
-  defaultMaxCalls: number
 }
 
 export interface AiToolCreateDto {
@@ -50,12 +44,8 @@ export interface AiToolCreateDto {
   sourceKey: string
   category?: string | null
   description?: string | null
-  inputSchemaJson?: string | null
-  outputSchemaJson?: string | null
   riskLevel: AiToolRiskLevel
   safetyLevel: AiToolSafetyLevel
-  requiresApproval: boolean
-  defaultMaxCalls: number
   status: EnableStatus
   remark?: string | null
 }
@@ -64,12 +54,8 @@ export interface AiToolUpdateDto extends BasicDto {
   toolName: string
   category?: string | null
   description?: string | null
-  inputSchemaJson?: string | null
-  outputSchemaJson?: string | null
   riskLevel: AiToolRiskLevel
   safetyLevel: AiToolSafetyLevel
-  requiresApproval: boolean
-  defaultMaxCalls: number
   remark?: string | null
 }
 

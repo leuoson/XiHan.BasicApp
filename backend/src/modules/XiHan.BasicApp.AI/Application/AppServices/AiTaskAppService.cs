@@ -138,7 +138,7 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
     {
         var policies = new List<SysAiTaskToolPolicy>();
         var seenToolIds = new HashSet<long>();
-        foreach (var command in commands.Where(policy => policy.IsEnabled))
+        foreach (var command in commands)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (command.ToolId <= 0)
@@ -162,10 +162,6 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
             {
                 AiTaskId = aiTaskId,
                 ToolId = command.ToolId,
-                AccessMode = AiTaskToolAccessMode.Allow,
-                MaxCalls = tool.DefaultMaxCalls,
-                ArgumentPolicyJson = null,
-                IsEnabled = command.IsEnabled,
                 Remark = Normalize(command.Remark, 500, "备注不能超过 500 个字符。")
             });
         }

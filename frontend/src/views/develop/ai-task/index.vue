@@ -62,7 +62,6 @@ interface TaskFormModel {
   promptText?: string | null
   promptCode?: string | null
   promptVersion?: string | null
-  inputVariablesJson?: string | null
   providerId?: string | null
   triggerType: AiTaskTriggerType
   cronExpression?: string | null
@@ -302,9 +301,6 @@ const toolPolicyColumns = computed<DataTableColumns<AiTaskToolPolicyInputDto>>((
       const tool = toolById.value.get(row.toolId)
       return h('div', { class: 'policy-tool' }, [
         h('span', { class: 'policy-tool__name' }, tool?.toolName ?? row.toolId),
-        tool?.requiresApproval
-          ? h(NTag, { size: 'tiny', type: 'warning', round: true, bordered: false }, () => t('develop.ai_task.policy_requires_approval'))
-          : null,
       ])
     },
   },
@@ -348,9 +344,6 @@ const skillPickerColumns = computed<DataTableColumns<AiToolSelectItemDto>>(() =>
     render(row) {
       return h('div', { class: 'policy-tool' }, [
         h('span', { class: 'policy-tool__name' }, `${row.toolName} (${row.toolCode})`),
-        row.requiresApproval
-          ? h(NTag, { size: 'tiny', type: 'warning', round: true, bordered: false }, () => t('develop.ai_task.policy_requires_approval'))
-          : null,
       ])
     },
   },
@@ -382,7 +375,6 @@ function createDefaultForm(): TaskFormModel {
     promptText: '',
     promptCode: null,
     promptVersion: null,
-    inputVariablesJson: null,
     providerId: null,
     triggerType: AiTaskTriggerType.Cron,
     cronExpression: '0 0 9 * * ?',
@@ -472,7 +464,6 @@ function detailToForm(detail: AiTaskDetailDto): TaskFormModel {
     promptText: detail.promptText ?? '',
     promptCode: detail.promptCode ?? null,
     promptVersion: detail.promptVersion ?? null,
-    inputVariablesJson: detail.inputVariablesJson ?? null,
     providerId: detail.providerId ?? null,
     triggerType: detail.triggerType,
     cronExpression: detail.cronExpression ?? null,
@@ -488,7 +479,6 @@ function detailToForm(detail: AiTaskDetailDto): TaskFormModel {
     status: detail.status,
     toolPolicies: detail.toolPolicies.map(policy => ({
       toolId: policy.toolId,
-      isEnabled: policy.isEnabled,
       remark: policy.remark ?? null,
     })),
     remark: detail.remark ?? null,
@@ -554,7 +544,6 @@ function confirmSkillPicker() {
     const existing = existingById.get(String(toolId))
     return {
       toolId,
-      isEnabled: true,
       remark: existing?.remark ?? null,
     }
   })
@@ -638,7 +627,6 @@ function formToPayload() {
     promptText: form.value.promptText || null,
     promptCode: form.value.promptCode?.trim() || null,
     promptVersion: form.value.promptVersion?.trim() || null,
-    inputVariablesJson: form.value.inputVariablesJson?.trim() || null,
     providerId: form.value.providerId || null,
     triggerType: form.value.triggerType,
     cronExpression: form.value.triggerType === AiTaskTriggerType.Cron ? form.value.cronExpression?.trim() || null : null,
@@ -653,7 +641,6 @@ function formToPayload() {
     sort: form.value.sort,
     toolPolicies: form.value.toolPolicies.map(policy => ({
       toolId: policy.toolId,
-      isEnabled: policy.isEnabled,
       remark: policy.remark?.trim() || null,
     })),
     remark: form.value.remark?.trim() || null,

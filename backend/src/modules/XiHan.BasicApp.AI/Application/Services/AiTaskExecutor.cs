@@ -13,7 +13,6 @@
 #endregion <<版权版本注释>>
 
 using System.Diagnostics;
-using System.Text.Json;
 using XiHan.BasicApp.AI.Domain.Entities;
 using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.BasicApp.AI.Domain.Repositories;
@@ -30,8 +29,6 @@ public sealed class AiTaskExecutor
     private readonly IAiTaskRunRepository _runRepository;
     private readonly IAiTaskChatService _chatService;
     private readonly AiTaskPromptRenderer _promptRenderer;
-    private readonly IAiTaskToolPolicyRepository _policyRepository;
-    private readonly IAiToolRepository _toolRepository;
 
     /// <summary>
     /// 构造函数
@@ -40,16 +37,12 @@ public sealed class AiTaskExecutor
         IAiTaskRepository taskRepository,
         IAiTaskRunRepository runRepository,
         IAiTaskChatService chatService,
-        AiTaskPromptRenderer promptRenderer,
-        IAiTaskToolPolicyRepository policyRepository,
-        IAiToolRepository toolRepository)
+        AiTaskPromptRenderer promptRenderer)
     {
         _taskRepository = taskRepository;
         _runRepository = runRepository;
         _chatService = chatService;
         _promptRenderer = promptRenderer;
-        _policyRepository = policyRepository;
-        _toolRepository = toolRepository;
     }
 
     /// <summary>
@@ -68,15 +61,13 @@ public sealed class AiTaskExecutor
 
         var stopwatch = Stopwatch.StartNew();
         var prompt = _promptRenderer.Render(task);
-        var policySnapshot = await BuildCapabilityPolicySnapshotAsync(task.BasicId, cancellationToken);
         var run = await _runRepository.AddAsync(new SysAiTaskRun
         {
             AiTaskId = task.BasicId,
             AiTaskCode = task.AiTaskCode,
             StartedTime = DateTimeOffset.Now,
             RunStatus = AiTaskRunStatus.Running,
-            PromptSnapshot = prompt,
-            CapabilityPolicySnapshotJson = policySnapshot
+            PromptSnapshot = prompt
         }, cancellationToken);
 
         try
@@ -106,32 +97,4 @@ public sealed class AiTaskExecutor
         }
     }
 
-    private async Task<string?> BuildCapabilityPolicySnapshotAsync(long aiTaskId, CancellationToken cancellationToken)
-    {
-        var policies = await _policyRepository.GetByTaskIdAsync(aiTaskId, cancellationToken);
-        var enabledPolicies = policies.Where(policy => policy.IsEnabled).ToList();
-        if (enabledPolicies.Count == 0)
-        {
-            return null;
-        }
-
-        var snapshots = new List<object>();
-        foreach (var policy in enabledPolicies)
-        {
-            var tool = await _toolRepository.GetByIdAsync(policy.ToolId, cancellationToken);
-            snapshots.Add(new
-            {
-                policy.ToolId,
-                ToolCode = tool?.ToolCode,
-                ToolName = tool?.ToolName,
-                policy.AccessMode,
-                policy.MaxCalls,
-                policy.ArgumentPolicyJson,
-                policy.IsEnabled,
-                IsAvailable = tool?.Status == EnableStatus.Enabled
-            });
-        }
-
-        return JsonSerializer.Serialize(snapshots);
-    }
 }

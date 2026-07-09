@@ -61,7 +61,6 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
         var taskIds = tasks.Select(task => task.BasicId).ToList();
         var policies = await _policyRepository.GetByTaskIdsAsync(taskIds, cancellationToken);
         var policyCounts = policies
-            .Where(policy => policy.IsEnabled)
             .GroupBy(policy => policy.AiTaskId)
             .ToDictionary(group => group.Key, group => group.Count());
 
@@ -93,7 +92,7 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
         var policies = await _policyRepository.GetByTaskIdAsync(task.BasicId, cancellationToken);
         var toolById = await LoadToolMapAsync(policies.Select(policy => policy.ToolId).Distinct().ToList(), cancellationToken);
         var detail = AiTaskApplicationMapper.ToDetailDto(task);
-        detail.CapabilityCount = policies.Count(policy => policy.IsEnabled);
+        detail.CapabilityCount = policies.Count;
         detail.ToolPolicies = policies.Select(policy => AiTaskApplicationMapper.ToToolPolicyDto(policy, toolById.GetValueOrDefault(policy.ToolId))).ToList();
         return detail;
     }

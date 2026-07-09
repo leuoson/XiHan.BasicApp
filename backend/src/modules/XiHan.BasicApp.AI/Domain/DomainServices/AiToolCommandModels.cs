@@ -28,12 +28,8 @@ public sealed record AiToolCreateCommand(
     string SourceKey,
     string? Category,
     string? Description,
-    string? InputSchemaJson,
-    string? OutputSchemaJson,
     AiToolRiskLevel RiskLevel,
     AiToolSafetyLevel SafetyLevel,
-    bool RequiresApproval,
-    int DefaultMaxCalls,
     EnableStatus Status,
     string? Remark);
 
@@ -45,12 +41,8 @@ public sealed record AiToolUpdateCommand(
     string ToolName,
     string? Category,
     string? Description,
-    string? InputSchemaJson,
-    string? OutputSchemaJson,
     AiToolRiskLevel RiskLevel,
     AiToolSafetyLevel SafetyLevel,
-    bool RequiresApproval,
-    int DefaultMaxCalls,
     string? Remark);
 
 /// <summary>

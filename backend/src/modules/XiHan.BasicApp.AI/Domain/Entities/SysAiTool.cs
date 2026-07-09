@@ -75,28 +75,10 @@ public partial class SysAiTool : BasicAppFullAuditedEntity
     public virtual string? Category { get; set; }
 
     /// <summary>
-    /// 旧技能名称字段（兼容第一阶段数据；新技能目录使用 SourceKey）
-    /// </summary>
-    [SugarColumn(ColumnName = "SkillName", ColumnDescription = "技能名称", Length = 200, IsNullable = true)]
-    public virtual string? SkillName { get; set; }
-
-    /// <summary>
     /// 描述
     /// </summary>
     [SugarColumn(ColumnName = "Description", ColumnDescription = "描述", Length = 500, IsNullable = true)]
     public virtual string? Description { get; set; }
-
-    /// <summary>
-    /// 输入参数 JSON Schema
-    /// </summary>
-    [SugarColumn(ColumnName = "Input_Schema_Json", ColumnDescription = "输入参数JSON Schema", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
-    public virtual string? InputSchemaJson { get; set; }
-
-    /// <summary>
-    /// 输出 JSON Schema
-    /// </summary>
-    [SugarColumn(ColumnName = "Output_Schema_Json", ColumnDescription = "输出JSON Schema", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
-    public virtual string? OutputSchemaJson { get; set; }
 
     /// <summary>
     /// 风险等级
@@ -109,18 +91,6 @@ public partial class SysAiTool : BasicAppFullAuditedEntity
     /// </summary>
     [SugarColumn(ColumnName = "Safety_Level", ColumnDescription = "安全级别")]
     public virtual AiToolSafetyLevel SafetyLevel { get; set; } = AiToolSafetyLevel.ReadOnly;
-
-    /// <summary>
-    /// 是否需要审批
-    /// </summary>
-    [SugarColumn(ColumnName = "Requires_Approval", ColumnDescription = "是否需要审批")]
-    public virtual bool RequiresApproval { get; set; } = false;
-
-    /// <summary>
-    /// 默认单次运行最大调用次数
-    /// </summary>
-    [SugarColumn(ColumnName = "Default_Max_Calls", ColumnDescription = "默认最大调用次数")]
-    public virtual int DefaultMaxCalls { get; set; } = 5;
 
     /// <summary>
     /// 状态

@@ -13,7 +13,6 @@
 #endregion <<版权版本注释>>
 
 using SqlSugar;
-using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.BasicApp.Core.Entities;
 
 namespace XiHan.BasicApp.AI.Domain.Entities;
@@ -37,30 +36,6 @@ public partial class SysAiTaskToolPolicy : BasicAppFullAuditedEntity
     /// </summary>
     [SugarColumn(ColumnName = "Tool_Id", ColumnDescription = "工具主键")]
     public virtual long ToolId { get; set; }
-
-    /// <summary>
-    /// 访问模式
-    /// </summary>
-    [SugarColumn(ColumnName = "Access_Mode", ColumnDescription = "访问模式")]
-    public virtual AiTaskToolAccessMode AccessMode { get; set; } = AiTaskToolAccessMode.Allow;
-
-    /// <summary>
-    /// 参数约束 JSON
-    /// </summary>
-    [SugarColumn(ColumnName = "Argument_Policy_Json", ColumnDescription = "参数约束JSON", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
-    public virtual string? ArgumentPolicyJson { get; set; }
-
-    /// <summary>
-    /// 是否启用
-    /// </summary>
-    [SugarColumn(ColumnName = "Is_Enabled", ColumnDescription = "是否启用")]
-    public virtual bool IsEnabled { get; set; } = true;
-
-    /// <summary>
-    /// 单次运行最大调用次数
-    /// </summary>
-    [SugarColumn(ColumnName = "Max_Calls", ColumnDescription = "最大调用次数")]
-    public virtual int MaxCalls { get; set; } = 5;
 
     /// <summary>
     /// 备注

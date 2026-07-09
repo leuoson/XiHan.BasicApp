@@ -79,12 +79,6 @@ public partial class SysAiTaskRun : BasicAppFullAuditedEntity
     public virtual string? PromptSnapshot { get; set; }
 
     /// <summary>
-    /// 技能策略快照 JSON
-    /// </summary>
-    [SugarColumn(ColumnName = "Capability_Policy_Snapshot_Json", ColumnDescription = "技能策略快照JSON", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
-    public virtual string? CapabilityPolicySnapshotJson { get; set; }
-
-    /// <summary>
     /// 结果文本
     /// </summary>
     [SugarColumn(ColumnName = "Result_Text", ColumnDescription = "结果文本", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]

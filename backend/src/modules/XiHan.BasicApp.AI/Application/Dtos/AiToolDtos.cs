@@ -44,8 +44,6 @@ public class AiToolListItemDto : BasicAppDto
     public string? Description { get; set; }
     public AiToolRiskLevel RiskLevel { get; set; }
     public AiToolSafetyLevel SafetyLevel { get; set; }
-    public bool RequiresApproval { get; set; }
-    public int DefaultMaxCalls { get; set; }
     public EnableStatus Status { get; set; }
     public DateTimeOffset CreatedTime { get; set; }
     public DateTimeOffset? ModifiedTime { get; set; }
@@ -56,8 +54,6 @@ public class AiToolListItemDto : BasicAppDto
 /// </summary>
 public sealed class AiToolDetailDto : AiToolListItemDto
 {
-    public string? InputSchemaJson { get; set; }
-    public string? OutputSchemaJson { get; set; }
     public string? Remark { get; set; }
 }
 
@@ -71,8 +67,6 @@ public sealed class AiToolSelectItemDto : BasicAppDto
     public AiToolType ToolType { get; set; }
     public AiToolRiskLevel RiskLevel { get; set; }
     public AiToolSafetyLevel SafetyLevel { get; set; }
-    public bool RequiresApproval { get; set; }
-    public int DefaultMaxCalls { get; set; }
 }
 
 /// <summary>
@@ -86,12 +80,8 @@ public sealed class AiToolCreateDto
     public string SourceKey { get; set; } = string.Empty;
     public string? Category { get; set; }
     public string? Description { get; set; }
-    public string? InputSchemaJson { get; set; }
-    public string? OutputSchemaJson { get; set; }
     public AiToolRiskLevel RiskLevel { get; set; } = AiToolRiskLevel.Low;
     public AiToolSafetyLevel SafetyLevel { get; set; } = AiToolSafetyLevel.ReadOnly;
-    public bool RequiresApproval { get; set; }
-    public int DefaultMaxCalls { get; set; } = 5;
     public EnableStatus Status { get; set; } = EnableStatus.Enabled;
     public string? Remark { get; set; }
 }
@@ -104,12 +94,8 @@ public sealed class AiToolUpdateDto : BasicAppUDto
     public string ToolName { get; set; } = string.Empty;
     public string? Category { get; set; }
     public string? Description { get; set; }
-    public string? InputSchemaJson { get; set; }
-    public string? OutputSchemaJson { get; set; }
     public AiToolRiskLevel RiskLevel { get; set; } = AiToolRiskLevel.Low;
     public AiToolSafetyLevel SafetyLevel { get; set; } = AiToolSafetyLevel.ReadOnly;
-    public bool RequiresApproval { get; set; }
-    public int DefaultMaxCalls { get; set; } = 5;
     public string? Remark { get; set; }
 }
 

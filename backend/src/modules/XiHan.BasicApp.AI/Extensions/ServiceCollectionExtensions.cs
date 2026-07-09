@@ -206,6 +206,7 @@ public static class ServiceCollectionExtensions
     /// <returns></returns>
     public static IServiceCollection AddAiTaskDataSeeders(this IServiceCollection services)
     {
+        services.AddDataSeeder<AiTaskSchemaSeeder>();
         services.AddDataSeeder<AiTaskResourceSeeder>();
         services.AddDataSeeder<AiTaskPermissionSeeder>();
         services.AddDataSeeder<AiTaskMenuSeeder>();

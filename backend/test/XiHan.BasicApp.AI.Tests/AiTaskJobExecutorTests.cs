@@ -31,32 +31,12 @@ public sealed class AiTaskJobExecutorTests
             AiTaskName = "Morning News",
             PromptMode = AiTaskPromptMode.Inline,
             PromptText = "Write a short brief.",
-            AgentMode = AiTaskAgentMode.PlainChat,
             Status = EnableStatus.Enabled
         };
         var repository = new InMemoryAiTaskRepository(task);
         var runRepository = new InMemoryAiTaskRunRepository();
         var chat = new FakeAiTaskChatService("Brief result");
-        var tool = new SysAiTool(11)
-        {
-            ToolCode = "knowledge_retrieve",
-            ToolName = "知识库检索",
-            SourceKey = "knowledge_retrieve",
-            Status = EnableStatus.Enabled
-        };
-        var policyRepository = new InMemoryAiTaskToolPolicyRepository(
-        [
-            new SysAiTaskToolPolicy
-            {
-                AiTaskId = 7,
-                ToolId = 11,
-                AccessMode = AiTaskToolAccessMode.Allow,
-                MaxCalls = 5,
-                IsEnabled = true
-            }
-        ]);
-        var toolRepository = new InMemoryAiToolRepository(tool);
-        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer(), policyRepository, toolRepository);
+        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer());
 
         var result = await executor.ExecuteAsync(7);
 
@@ -64,6 +44,6 @@ public sealed class AiTaskJobExecutorTests
         Assert.Single(runRepository.Runs);
         Assert.Equal(AiTaskRunStatus.Success, runRepository.Runs[0].RunStatus);
         Assert.Equal("Brief result", runRepository.Runs[0].ResultText);
-        Assert.Contains("knowledge_retrieve", runRepository.Runs[0].CapabilityPolicySnapshotJson);
+        Assert.Equal("Write a short brief.", runRepository.Runs[0].PromptSnapshot);
     }
 }
