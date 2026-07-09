@@ -69,6 +69,26 @@ Use the existing ownership model:
 - Preserve the dense, work-focused admin style. Avoid marketing-style hero sections inside console pages.
 - Preserve mobile and narrow viewport usability when editing shared layouts, schema components, chat surfaces, auth pages, or high-traffic management pages.
 
+## Management Page UX Guardrails
+
+- Match nearby project pages before inventing a new layout. For management pages, use mature local pages as references for the search area, action row, table density, dialogs, and batch actions.
+- Use selectors for foreign keys, providers, models, resources, enums, and other known options. Do not ask users to type raw ids in forms.
+- Keep table columns aligned with create/edit/detail fields. Do not surface internal or runtime-only values unless they are intentionally read-only diagnostics.
+- Do not show raw JSON editors unless the schema is validated, understandable, and consumed by backend runtime behavior.
+- Use business language consistently with existing locale files, menus, and adjacent pages. Do not invent a new label for an established concept.
+- Add/edit UI should be a scoped modal or drawer with clear grouping, not a maximized screen, unless the neighboring feature uses the same fullscreen pattern.
+- For many-to-many choices, prefer a click-to-open table picker with checkbox selection, search/filter, risk/safety columns, and confirm/cancel actions when users need to compare rows.
+- If a setting is not runtime-enforced, do not expose it as editable UI. Stored-only values create false confidence.
+
+## Product Form And Interaction Discipline
+
+- Build forms around the user's business language, not database fields, class names, method names, or backing-service implementation details.
+- When one field controls the meaning of other fields, show only the relevant fields for the selected mode and reset or validate hidden values deliberately.
+- Use explicit actions for immediate/manual behavior. Do not hide a command inside a configuration option that sounds like a schedule, mode, or state.
+- Keep separate business concepts separate in the UI. Do not add controls for a future feature just because the current data model could store them.
+- Prefer table-style pickers for multi-row selection when users need to compare names, descriptions, status, risk, ownership, or permissions before choosing.
+- Keep selection data human-friendly through typed API lookup modules, with loading, empty, disabled, and permission-denied states handled visibly.
+
 ## Frontend Change Workflow
 
 For a new frontend capability:
@@ -105,3 +125,5 @@ pnpm dev
 ```
 
 For UI layout changes, inspect affected routes in a browser or screenshot workflow. Check that text does not overlap, tables fit their containers, icon-only actions have tooltips or labels, loading/empty/error states are visible, and dialogs/drawers are usable on narrow viewports.
+
+For management-page changes, also verify the search area, action row, table columns, add/edit dialog, and any selector or picker interaction against an existing neighboring page. If menus or permissions are seeded by backend changes, restart or reseed the app before checking the route.

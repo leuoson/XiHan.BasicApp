@@ -60,6 +60,20 @@ Use the existing module boundary before creating new files:
 - Keep business rules in domain services or domain models, not in controllers, endpoint lambdas, or frontend code.
 - Keep DTOs, contracts, mappers, app services, query services, domain services, repositories, and seeders in focused files.
 - Follow the existing copyright header style when adding C# files.
+- Preserve the repository's copyright header format, but do not hardcode a universal author. Determine author and email from the user's explicit instruction, `git config user.name` / `git config user.email`, or the nearest-file convention for that change.
+
+## Project Change Discipline
+
+- Start by searching for the existing subsystem that already owns the concept, such as scheduling, background execution, permissions, menus, files, messaging, notifications, workflows, or AI. Extend or wrap it before introducing a parallel mechanism.
+- Separate the user-facing business model from the technical backing model. If the backing system requires class names, method names, JSON, ids, or other low-level fields, expose a humane application service and keep those details internal unless users genuinely need them.
+- Do not expose configuration fields as supported product behavior until runtime code consumes and enforces them.
+- If a value is only stored, snapshotted, or reserved for a future feature, keep it internal, disabled, or clearly non-active.
+- Keep create/edit DTOs, list DTOs, frontend columns, and runtime behavior aligned. If a field is read-only or diagnostic, make that intentional instead of leaking every returned property.
+- Prefer lookup/query endpoints that let the frontend render selectors for foreign keys, enums, and related resources. Users should not need to type raw ids.
+- Avoid generic JSON configuration fields unless a real parser/runtime consumer exists and the frontend can present a clear, validated contract.
+- Keep future business concepts out of the current feature. Add extension points only when they are useful now or clearly protect the current design from churn.
+- For user-triggered code execution, external calls, tools, skills, or automation, design permission checks, audit records, and runtime enforcement before advertising the capability.
+- When seeders create menus, permissions, resources, roles, or default rows, verify that startup seeding or a focused test actually populates them.
 
 ## Contribution Conventions
 
@@ -82,6 +96,7 @@ For a new backend capability:
 6. Add or update seeders for permissions, menus, resources, role grants, operations, or default configuration when the feature must appear in the UI or authorization catalog.
 7. Register new services in the module's `Extensions/ServiceCollectionExtensions.cs` when constructor injection requires it.
 8. Check the frontend API module and route/component path if the backend contract changes.
+9. For changes backed by existing workers, schedulers, workflows, or automation infrastructure, verify the synchronization or execution path with at least one real trigger or state transition instead of relying on DTO compilation alone.
 
 ## Verification
 
@@ -104,3 +119,5 @@ For runtime HTTP checks, do not hardcode hostnames or ports in guidance or scrip
 curl "$BACKEND_BASE_URL/health"
 curl -L "$BACKEND_BASE_URL/scalar"
 ```
+
+When a change touches seed data, start the WebHost or run a focused seeding test so the generated permissions, menus, resources, and default data are proven available. When a backend contract is consumed by the frontend, also run the relevant frontend type check or build.
