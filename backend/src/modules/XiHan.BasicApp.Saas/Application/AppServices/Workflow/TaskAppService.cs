@@ -18,6 +18,7 @@ using XiHan.BasicApp.Saas.Application.Dtos;
 using XiHan.BasicApp.Saas.Application.Mappers;
 using XiHan.BasicApp.Saas.Application.Services;
 using XiHan.BasicApp.Saas.Domain.DomainServices;
+using XiHan.BasicApp.Saas.Domain.Entities;
 using XiHan.BasicApp.Saas.Domain.Enums;
 using XiHan.BasicApp.Saas.Domain.Permissions;
 using XiHan.BasicApp.Saas.Domain.Repositories;
@@ -36,6 +37,9 @@ namespace XiHan.BasicApp.Saas.Application.AppServices;
 [DynamicApi(Group = "BasicApp.Saas", GroupName = "系统SaaS服务", Tag = "系统任务")]
 public sealed class TaskAppService : SaasApplicationService, ITaskAppService
 {
+    private const string AiTaskGroup = "ai-task";
+    private const string AiTaskCodePrefix = "ai-task:";
+
     private readonly ITaskDomainService _taskDomainService;
     private readonly ITaskSchedulerSyncService _taskSchedulerSyncService;
     private readonly ITaskRepository _taskRepository;
@@ -65,6 +69,7 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
     {
         ArgumentNullException.ThrowIfNull(input);
         cancellationToken.ThrowIfCancellationRequested();
+        EnsureNotSystemManagedAiTask(input.TaskCode, input.TaskGroup);
 
         var result = await _taskDomainService.CreateTaskAsync(TaskApplicationMapper.ToCreateCommand(input), cancellationToken);
         _taskSchedulerSyncService.Apply(result.Task, result.SchedulerSyncAction);
@@ -79,6 +84,7 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
     public async Task DeleteTaskAsync(long id, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        EnsureNotSystemManagedAiTask(await GetTaskOrThrowAsync(id, cancellationToken));
 
         var result = await _taskDomainService.DeleteTaskAsync(id, cancellationToken);
         _taskSchedulerSyncService.Apply(result.Task, result.SchedulerSyncAction);
@@ -101,6 +107,8 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
     {
         ArgumentNullException.ThrowIfNull(input);
         cancellationToken.ThrowIfCancellationRequested();
+        EnsureNotSystemManagedAiTask(await GetTaskOrThrowAsync(input.BasicId, cancellationToken));
+        EnsureNotSystemManagedAiTask(null, input.TaskGroup);
 
         var result = await _taskDomainService.UpdateTaskAsync(TaskApplicationMapper.ToUpdateCommand(input), cancellationToken);
         _taskSchedulerSyncService.Apply(result.Task, result.SchedulerSyncAction);
@@ -116,6 +124,7 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
     {
         ArgumentNullException.ThrowIfNull(input);
         cancellationToken.ThrowIfCancellationRequested();
+        EnsureNotSystemManagedAiTask(await GetTaskOrThrowAsync(input.BasicId, cancellationToken));
 
         var result = await _taskDomainService.UpdateTaskRunStatusAsync(TaskApplicationMapper.ToRunStatusCommand(input), cancellationToken);
         _taskSchedulerSyncService.Apply(result.Task, result.SchedulerSyncAction);
@@ -131,6 +140,7 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
     {
         ArgumentNullException.ThrowIfNull(input);
         cancellationToken.ThrowIfCancellationRequested();
+        EnsureNotSystemManagedAiTask(await GetTaskOrThrowAsync(input.BasicId, cancellationToken));
 
         var result = await _taskDomainService.UpdateTaskStatusAsync(TaskApplicationMapper.ToStatusCommand(input), cancellationToken);
         _taskSchedulerSyncService.Apply(result.Task, result.SchedulerSyncAction);
@@ -153,6 +163,7 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
 
         var task = await _taskRepository.GetByIdAsync(input.BasicId, cancellationToken)
             ?? throw new UserFriendlyException("任务不存在。");
+        EnsureNotSystemManagedAiTask(task);
         if (task.Status != EnableStatus.Enabled)
         {
             throw new UserFriendlyException("任务已禁用，请先启用后再执行。");
@@ -166,5 +177,34 @@ public sealed class TaskAppService : SaasApplicationService, ITaskAppService
 
         var instanceId = await _jobScheduler.TriggerJobAsync(task.TaskCode);
         return new TaskRunResultDto { InstanceId = instanceId };
+    }
+
+    /// <summary>
+    /// 确保不是 AI 任务托管的系统调度行
+    /// </summary>
+    public static void EnsureNotSystemManagedAiTask(SysTask task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        EnsureNotSystemManagedAiTask(task.TaskCode, task.TaskGroup);
+    }
+
+    private static void EnsureNotSystemManagedAiTask(string? taskCode, string? taskGroup)
+    {
+        if (string.Equals(taskGroup, AiTaskGroup, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(taskCode) && taskCode.Trim().StartsWith(AiTaskCodePrefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new UserFriendlyException("AI 任务的系统调度行请在 AI 任务页面管理。");
+        }
+    }
+
+    private async Task<SysTask> GetTaskOrThrowAsync(long id, CancellationToken cancellationToken)
+    {
+        if (id <= 0)
+        {
+            throw new UserFriendlyException("任务主键无效。");
+        }
+
+        return await _taskRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new UserFriendlyException("任务不存在。");
     }
 }

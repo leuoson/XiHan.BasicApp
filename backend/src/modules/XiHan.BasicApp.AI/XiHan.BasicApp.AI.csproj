@@ -12,7 +12,8 @@
         <Description>曦寒基础应用 AI 库</Description>
         <OutputType>Library</OutputType>
         <!-- Qdrant 向量库连接器目前仅 preview、无 GA，本库为已知的有意预发布依赖，抑制打包警告 NU5104 -->
-        <NoWarn>$(NoWarn);NU5104</NoWarn>
+        <!-- XHFH001 的标准模板固定为原作者；本次新增文件按实际贡献者标注作者。 -->
+        <NoWarn>$(NoWarn);NU5104;XHFH001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

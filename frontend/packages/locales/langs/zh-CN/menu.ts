@@ -56,6 +56,8 @@ export default {
   ai_provider: 'AI 提供商',
   knowledge_base: '知识库',
   ai_prompt: 'AI 提示词',
+  ai_task: 'AI 任务',
+  ai_capability: 'AI 技能',
   // ==================== 通用 / 历史键 ====================
   dashboard: '仪表板',
   workspace: '工作台',

@@ -28,6 +28,19 @@ Add a first-class AI scheduled task capability that lets users create, manage, a
 
 The existing flow should be reused for time calculation, retries, concurrency, timeout, execution status, and task logs. The AI feature should not ask users to configure that low-level execution model directly.
 
+## Project Constraints Applied
+
+This design must stay inside the local `AGENTS.md` and module skills:
+
+- Backend work stays in the existing .NET 10 XiHan.Framework module layout. AI task domain objects, DTOs, mappers, app services, query services, repositories, permissions, and seeders belong to `XiHan.BasicApp.AI`.
+- The scheduler substrate remains the SaaS `SysTask` and XiHan scheduled job infrastructure. Do not introduce a second scheduler, Minimal API endpoint set, EF Core persistence path, or replacement framework.
+- Cross-module scheduler writes must go through the existing SaaS task domain/repository/scheduler-sync patterns instead of duplicating task scheduling logic in the AI module.
+- Persisted AI task entities must use the repository's SqlSugar entity conventions, including `BasicApp*Entity` base classes, `[SugarTable]`, `[SugarColumn]`, and tenant-aware indexes. Tenant-scoped unique indexes should include `TenantId` and `IsDeleted` when the entity is soft deleted.
+- Platform/global catalog rows use `TenantId = 0`; tenant-specific task rows use the active tenant context.
+- Protected backend operations need `[PermissionAuthorize(...)]` and module-owned permission constants, with matching resource, permission, menu, and role-permission seeders.
+- Frontend work must use Vue 3, Naive UI, typed Dynamic API modules under `frontend/src/api/modules/ai`, and route pages under `frontend/src/views/develop`.
+- The existing system task page may show backing scheduler rows for diagnostics, but backend APIs must also protect system-managed rows. Frontend disabling is not a security boundary.
+
 ## Product Model
 
 Introduce AI Task as the user-facing feature.
@@ -46,11 +59,20 @@ An AI task should contain:
 
 The AI task page should be the main management surface. Backing `SysTask` rows should use `TaskGroup = "ai-task"` and be shown as system-managed rows on the existing system task page, with direct edit/delete actions disabled for those rows.
 
+Use a dedicated permission resource for this user-facing model, for example `ai_task` with `read`, `create`, `update`, `delete`, and `execute` operations. Tool catalog management should use a separate resource such as `ai_task_tool` so ordinary task authors do not automatically gain permission to define or enable risky tools.
+
 ## Data Design
 
 ### SysAiTask
 
 Stores the AI automation definition.
+
+Recommended persistence shape:
+
+- Table: `Sys_Ai_Task`.
+- Base class: `BasicAppFullAuditedEntity`.
+- Unique index: `(TenantId, AiTaskCode, IsDeleted)`.
+- Common indexes: `(TenantId, Status)`, `(TenantId, CreatedTime)`, `(BackingSysTaskId)`.
 
 Key fields:
 
@@ -71,6 +93,13 @@ Key fields:
 
 Stores the tool catalog exposed to AI tasks.
 
+Recommended persistence shape:
+
+- Table: `Sys_Ai_Tool`.
+- Base class: `BasicAppFullAuditedEntity`.
+- Unique index: `(TenantId, ToolCode, IsDeleted)`.
+- System-seeded tools use `TenantId = 0`; tenant-created tool aliases or overrides can use the active tenant id.
+
 Key fields:
 
 - `ToolCode`: stable unique tool id.
@@ -88,6 +117,12 @@ The first implementation can seed built-in tools from known AI skills and add a 
 
 Stores the tools allowed for one AI task.
 
+Recommended persistence shape:
+
+- Table: `Sys_Ai_Task_Tool_Policy`.
+- Base class: `BasicAppFullAuditedEntity`.
+- Unique index: `(TenantId, AiTaskId, ToolCode, IsDeleted)`.
+
 Key fields:
 
 - `AiTaskId`.
@@ -102,6 +137,13 @@ The executor must enforce this policy. Prompt text alone must never authorize to
 ### SysAiTaskRun
 
 Stores AI task execution history.
+
+Recommended persistence shape:
+
+- Table: `Sys_Ai_Task_Run`.
+- Base class: `BasicAppCreationEntity`.
+- Keep it append-only for auditability; consider split-table storage only if run volume follows `SysTaskLog` scale.
+- Indexes: `(TenantId, AiTaskId, CreatedTime)`, `(TenantId, RunStatus, CreatedTime)`, and scheduler correlation fields.
 
 Key fields:
 
@@ -123,7 +165,7 @@ Key fields:
 1. User creates or updates an AI task through `AiTaskAppService`.
 2. The app service validates prompt/provider/schedule/tool policy and writes `SysAiTask`.
 3. The app service creates or updates a backing `SysTask` with:
-   - `TaskClass = AiTaskJobExecutor`
+   - `TaskClass = typeof(AiTaskJobExecutor).FullName`
    - `TaskMethod = ExecuteAsync`
    - `TaskParams = {"aiTaskId": <id>}`
    - schedule, retry, timeout, concurrency, priority, and status mirrored from `SysAiTask`
@@ -131,9 +173,11 @@ Key fields:
 5. On trigger, `DynamicJobWorker` invokes `AiTaskJobExecutor.ExecuteAsync`.
 6. `AiTaskJobExecutor` loads `SysAiTask`, reconstructs tenant/user execution context, snapshots prompt/provider/tool policy, creates a run record, and executes the AI task.
 7. If no tools are enabled, execution can call `IXiHanAiService.ChatAsync`.
-8. If tools are enabled, execution creates an agent through the XiHan AI agent factory and injects only tools allowed by `SysAiTaskToolPolicy`.
+8. If tools are enabled, execution uses the current XiHan AI skill/tool abstractions through an adapter owned by the AI module. Do not assume a concrete agent factory type until implementation verifies the current framework API; the adapter should inject only tools allowed by `SysAiTaskToolPolicy`.
 9. The executor writes result or failure to `SysAiTaskRun`; scheduler infrastructure writes `SysTaskLog`.
 10. Future output actions such as "send to my messages" can be modeled as controlled tools or post-run actions.
+
+`AiTaskJobExecutor.ExecuteAsync` should accept `aiTaskId` as a named parameter and an optional `CancellationToken` so the current `DynamicJobWorker` JSON parameter mapping can call it reliably.
 
 ## Tool And Permission Policy
 
@@ -147,9 +191,21 @@ If any gate fails, the tool is unavailable to the agent. If permissions are revo
 
 The AI task creation assistant may suggest tools, schedules, and prompt text, but it must only choose from tools the current user is already allowed to use. It may create a disabled draft or a pending-confirmation draft, but it must not enable high-risk tools automatically.
 
+Permission enforcement must happen in two places:
+
+- App services use `[PermissionAuthorize]` for task CRUD, run-now, run-history read, and tool catalog management.
+- Runtime tool invocation checks the task execution identity against `SysAiTool.RequiredPermissionCode`; prompt text alone never grants access.
+
 ## User Experience
 
 Add an AI task management page under the AI/development area, separate from the low-level system task page.
+
+Concrete repo shape:
+
+- Backend Dynamic API services: `AiTaskAppService`, `AiTaskQueryService`, and tool/run query or command services as needed.
+- Frontend API modules: `frontend/src/api/modules/ai/task.ts`, `task.types.ts`, and tool/run companion modules if they become separate services.
+- Frontend page: `frontend/src/views/develop/ai-task/index.vue`.
+- Menu seed: `MenuCode = "ai_task"`, `Path = "/develop/aiTask"`, `Component = "Develop/AiTask/Index"`, `I18nKey = "menu.ai_task"`, permission `ai_task:read`.
 
 Primary workflows:
 
@@ -173,7 +229,7 @@ The existing system task page remains useful for platform administrators and dia
 
 Build the smallest complete loop:
 
-- `SysAiTask`, `SysAiTaskToolPolicy`, and `SysAiTaskRun`.
+- `SysAiTask`, `SysAiTool`, `SysAiTaskToolPolicy`, and `SysAiTaskRun`.
 - AI task CRUD/query services.
 - Backing `SysTask` create/update/delete/status sync.
 - `AiTaskJobExecutor` that supports:
@@ -183,13 +239,14 @@ Build the smallest complete loop:
   - tool policy storage and validation, with agent/tool execution prepared behind an interface.
 - AI task page with prompt/provider/schedule/tool-policy fields.
 - Manual "run now" and run history.
+- Permission/resource/menu/role seeders for `ai_task` and the first `ai_task_tool` catalog management surface.
 
 Tool execution can be introduced behind an `IAiTaskToolProvider` abstraction so the data model and UI are ready for tool policies from the first slice, even if only a small built-in tool set is enabled initially.
 
 ## Decisions For The First Implementation
 
 - Backing `SysTask` rows use `TaskGroup = "ai-task"` and are displayed as read-only system-managed rows in the system task page.
+- The SaaS `TaskAppService` public mutation endpoints should reject direct update, delete, status, run-status, and run-now operations for `TaskGroup = "ai-task"` rows. Only the AI task application service should manage the backing scheduler row.
 - The first seeded tool catalog should include the existing knowledge retrieval skill and a disabled placeholder catalog entry for web search, because web search requires a real tool/provider integration before it can run safely.
 - High-risk tools cannot be enabled automatically by the assistant-created draft flow. They require explicit user confirmation and the matching permission code.
 - The first output action is run history only. "Send result to my messages" should be implemented in a future output-action slice as a controlled tool/action, not as arbitrary executor code.
-

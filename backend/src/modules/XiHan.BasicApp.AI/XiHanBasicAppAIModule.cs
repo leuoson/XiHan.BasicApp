@@ -59,5 +59,9 @@ public class XiHanBasicAppAIModule : XiHanModule
         services.AddPromptDataSeeders();
         services.AddPromptDomainServices();
         services.AddPromptStore();
+
+        // AI 定时任务：人性化任务配置 + 内部 SysTask 调度桥接 + 执行记录
+        services.AddAiTaskDataSeeders();
+        services.AddAiTaskServices();
     }
 }

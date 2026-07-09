@@ -16,9 +16,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.SemanticKernel;
+using XiHan.BasicApp.AI.Application.Services;
 using XiHan.BasicApp.AI.Domain.DomainServices;
 using XiHan.BasicApp.AI.Domain.DomainServices.Implementations;
+using XiHan.BasicApp.AI.Domain.Repositories;
 using XiHan.BasicApp.AI.Infrastructure.Configuration;
+using XiHan.BasicApp.AI.Infrastructure.Repositories;
 using XiHan.BasicApp.AI.Infrastructure.Security;
 using XiHan.BasicApp.AI.Infrastructure.Seeders.System;
 using XiHan.BasicApp.AI.Infrastructure.Skills;
@@ -193,6 +196,41 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddPromptStore(this IServiceCollection services)
     {
         services.Replace(ServiceDescriptor.Singleton<IAiPromptStore, SaasAiPromptStore>());
+        return services;
+    }
+
+    /// <summary>
+    /// 添加 AI 任务种子数据提供者
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <returns></returns>
+    public static IServiceCollection AddAiTaskDataSeeders(this IServiceCollection services)
+    {
+        services.AddDataSeeder<AiTaskResourceSeeder>();
+        services.AddDataSeeder<AiTaskPermissionSeeder>();
+        services.AddDataSeeder<AiTaskMenuSeeder>();
+        services.AddDataSeeder<AiTaskRolePermissionSeeder>();
+        services.AddDataSeeder<AiToolSeeder>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加 AI 任务领域、仓储与执行服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <returns></returns>
+    public static IServiceCollection AddAiTaskServices(this IServiceCollection services)
+    {
+        services.AddScoped<IAiTaskDomainService, AiTaskDomainService>();
+        services.AddScoped<IAiToolDomainService, AiToolDomainService>();
+        services.AddScoped<IAiTaskRepository, AiTaskRepository>();
+        services.AddScoped<IAiTaskRunRepository, AiTaskRunRepository>();
+        services.AddScoped<IAiToolRepository, AiToolRepository>();
+        services.AddScoped<IAiTaskToolPolicyRepository, AiTaskToolPolicyRepository>();
+        services.AddScoped<AiTaskPromptRenderer>();
+        services.AddScoped<AiTaskExecutor>();
+        services.AddScoped<IAiTaskChatService, XiHanAiTaskChatService>();
+        services.AddScoped<IAiTaskBackingTaskSyncService, AiTaskBackingTaskSyncService>();
         return services;
     }
 }
