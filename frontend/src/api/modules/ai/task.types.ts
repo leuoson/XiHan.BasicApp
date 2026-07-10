@@ -1,6 +1,14 @@
 import type { ApiId, BasicDto, DateTimeString } from '../../types'
 import type { EnableStatus } from '../shared'
-import type { AiTaskPromptMode, AiTaskRunStatus, AiTaskTriggerType } from './task.enums'
+import type {
+  AiTaskPromptMode,
+  AiTaskRunEventRole,
+  AiTaskRunEventType,
+  AiTaskRunGuidanceStatus,
+  AiTaskRunnerKind,
+  AiTaskRunStatus,
+  AiTaskTriggerType,
+} from './task.enums'
 import type { AiToolRiskLevel, AiToolSafetyLevel, AiToolType } from './tool.enums'
 
 export { EnableStatus } from '../shared'
@@ -40,6 +48,12 @@ export interface AiTaskStatusUpdateDto extends BasicDto {
 }
 
 export interface AiTaskRunDto extends BasicDto {
+}
+
+export interface AiTaskAppendGuidanceDto {
+  runId: ApiId
+  content: string
+  clientRequestId?: string | null
 }
 
 export interface AiTaskToolPolicyInputDto {
@@ -111,10 +125,35 @@ export interface AiTaskRunListItemDto extends BasicDto {
   createdTime: DateTimeString
 }
 
+export interface AiTaskRunEventDto extends BasicDto {
+  runId: ApiId
+  sequence: number
+  eventType: AiTaskRunEventType
+  role: AiTaskRunEventRole
+  content?: string | null
+  payloadJson?: string | null
+  createdTime: DateTimeString
+}
+
+export interface AiTaskRunGuidanceDto extends BasicDto {
+  runId: ApiId
+  content: string
+  status: AiTaskRunGuidanceStatus
+  clientRequestId?: string | null
+  appliedTime?: DateTimeString | null
+  ignoredReason?: string | null
+  createdTime: DateTimeString
+}
+
 export interface AiTaskRunDetailDto extends AiTaskRunListItemDto {
   leaseOwner?: string | null
   leaseExpiresAt?: DateTimeString | null
   lastHeartbeatTime?: DateTimeString | null
+  runnerKind?: AiTaskRunnerKind | string | null
+  runnerVersion?: string | null
+  agentSessionId?: string | null
   promptSnapshot?: string | null
   resultText?: string | null
+  events: AiTaskRunEventDto[]
+  guidance: AiTaskRunGuidanceDto[]
 }

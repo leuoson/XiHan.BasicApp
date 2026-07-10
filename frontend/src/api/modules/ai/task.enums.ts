@@ -20,6 +20,42 @@ export enum AiTaskRunStatus {
   Queued = 'Queued',
 }
 
+export enum AiTaskRunEventType {
+  RunQueued = 'RunQueued',
+  RunStarted = 'RunStarted',
+  PromptRendered = 'PromptRendered',
+  AgentStepStarted = 'AgentStepStarted',
+  AgentMessageDelta = 'AgentMessageDelta',
+  ToolCallStarted = 'ToolCallStarted',
+  ToolCallFinished = 'ToolCallFinished',
+  GuidanceReceived = 'GuidanceReceived',
+  GuidanceApplied = 'GuidanceApplied',
+  GuidanceIgnored = 'GuidanceIgnored',
+  RunSucceeded = 'RunSucceeded',
+  RunFailed = 'RunFailed',
+  RunCanceled = 'RunCanceled',
+  RunRequeued = 'RunRequeued',
+}
+
+export enum AiTaskRunEventRole {
+  System = 'System',
+  User = 'User',
+  Assistant = 'Assistant',
+  Tool = 'Tool',
+}
+
+export enum AiTaskRunGuidanceStatus {
+  Pending = 'Pending',
+  Applied = 'Applied',
+  Ignored = 'Ignored',
+}
+
+export enum AiTaskRunnerKind {
+  PlainChat = 'PlainChat',
+  MicrosoftAgentFramework = 'MicrosoftAgentFramework',
+  SemanticKernelAgent = 'SemanticKernelAgent',
+}
+
 export const AI_TASK_PROMPT_MODE_OPTIONS = [
   { label: '内联提示词', value: AiTaskPromptMode.Inline },
   { label: '提示词库', value: AiTaskPromptMode.PromptStore },

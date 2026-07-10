@@ -6,6 +6,7 @@ import type {
   AiTaskDetailDto,
   AiTaskListItemDto,
   AiTaskRunDetailDto,
+  AiTaskRunEventDto,
   AiTaskRunListItemDto,
   AiTaskToolPolicyInputDto,
   AiTaskUpdateDto,
@@ -31,14 +32,19 @@ import {
   NSpace,
   NSwitch,
   NTag,
+  NTimeline,
+  NTimelineItem,
   NTooltip,
   useDialog,
   useMessage,
 } from 'naive-ui'
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   AI_TASK_PROMPT_MODE_OPTIONS,
+  AiTaskRunEventRole,
+  AiTaskRunEventType,
+  AiTaskRunGuidanceStatus,
   AI_TASK_RUN_STATUS_OPTIONS,
   AI_TASK_SCHEDULE_TRIGGER_TYPE_OPTIONS,
   AI_TASK_TRIGGER_TYPE_OPTIONS,
@@ -55,6 +61,7 @@ import {
   createPageRequest,
 } from '@/api'
 import { SchemaPage } from '~/components'
+import { useSignalR } from '~/composables'
 import { STATUS_OPTIONS } from '~/constants'
 import { useEnumOptions } from '~/hooks'
 import { getOptionLabel } from '~/utils'
@@ -91,7 +98,10 @@ interface TaskFormModel {
 const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
+const signalR = useSignalR()
 const statusEnumOptions = useEnumOptions('EnableStatus', STATUS_OPTIONS)
+const AI_TASK_RUN_EVENT_RECEIVED = 'AiTaskRunEventReceived'
+const RUN_EVENT_POLLING_INTERVAL_MS = 2000
 
 const lookupLoading = ref(false)
 const submitLoading = ref(false)
@@ -110,11 +120,15 @@ const form = ref<TaskFormModel>(createDefaultForm())
 const runHistoryRows = ref<AiTaskRunListItemDto[]>([])
 const runHistoryDetail = ref<AiTaskRunDetailDto | null>(null)
 const runHistoryTask = ref<AiTaskListItemDto | null>(null)
+const runGuidanceInput = ref('')
+const runGuidanceSubmitting = ref(false)
+let runEventPollingTimer: ReturnType<typeof setInterval> | null = null
 
 const modalTitle = computed(() => (form.value.basicId ? t('develop.ai_task.modal_edit_title') : t('develop.ai_task.modal_add_title')))
 const runHistoryTitle = computed(() => runHistoryTask.value
   ? `${t('develop.ai_task.run_history_title')} - ${runHistoryTask.value.aiTaskName}`
   : t('develop.ai_task.run_history_title'))
+const canAppendRunGuidance = computed(() => !!runHistoryDetail.value && isRunActive(runHistoryDetail.value.runStatus))
 
 function reload() {
   void schemaPageRef.value?.reload()
@@ -718,7 +732,7 @@ async function handleRun(row: AiTaskListItemDto) {
       message.error(result.errorMessage || t('develop.ai_task.run_failed'))
     }
     if (runHistoryVisible.value && runHistoryTask.value?.basicId === row.basicId) {
-      await loadRunHistory(row.basicId)
+      await loadRunHistory(row.basicId, result.runId ?? undefined)
     }
   }
   catch {
@@ -733,13 +747,16 @@ async function openRunHistory(row: AiTaskListItemDto) {
   await loadRunHistory(row.basicId)
 }
 
-async function loadRunHistory(taskId: AiTaskListItemDto['basicId']) {
+async function loadRunHistory(taskId: AiTaskListItemDto['basicId'], selectedRunId?: AiTaskRunListItemDto['basicId']) {
   runHistoryLoading.value = true
   try {
     const rows = await aiTaskApi.runList(taskId)
     runHistoryRows.value = rows
-    const selected = rows.find(row => row.basicId === runHistoryDetail.value?.basicId) ?? rows[0]
-    runHistoryDetail.value = selected ? await aiTaskApi.runDetail(selected.basicId) : null
+    const selected = rows.find(row => String(row.basicId) === String(selectedRunId))
+      ?? rows.find(row => row.basicId === runHistoryDetail.value?.basicId)
+      ?? rows[0]
+    runHistoryDetail.value = selected ? normalizeRunDetail(await aiTaskApi.runDetail(selected.basicId)) : null
+    runGuidanceInput.value = ''
   }
   catch {
     message.error(t('develop.ai_task.load_run_history_failed'))
@@ -752,13 +769,178 @@ async function loadRunHistory(taskId: AiTaskListItemDto['basicId']) {
 async function selectRunHistory(row: AiTaskRunListItemDto) {
   runHistoryLoading.value = true
   try {
-    runHistoryDetail.value = await aiTaskApi.runDetail(row.basicId)
+    runHistoryDetail.value = normalizeRunDetail(await aiTaskApi.runDetail(row.basicId))
+    runGuidanceInput.value = ''
   }
   catch {
     message.error(t('develop.ai_task.load_run_history_failed'))
   }
   finally {
     runHistoryLoading.value = false
+  }
+}
+
+function normalizeRunDetail(detail: AiTaskRunDetailDto | null): AiTaskRunDetailDto | null {
+  if (!detail) {
+    return null
+  }
+
+  return {
+    ...detail,
+    events: [...(detail.events ?? [])].sort(compareRunEvents),
+    guidance: [...(detail.guidance ?? [])].sort((a, b) => String(a.createdTime).localeCompare(String(b.createdTime))),
+  }
+}
+
+function compareRunEvents(left: AiTaskRunEventDto, right: AiTaskRunEventDto) {
+  return left.sequence - right.sequence || String(left.createdTime).localeCompare(String(right.createdTime))
+}
+
+function mergeRunEvents(events: AiTaskRunEventDto[]) {
+  const detail = runHistoryDetail.value
+  if (!detail || events.length === 0) {
+    return
+  }
+
+  const byKey = new Map<string, AiTaskRunEventDto>()
+  for (const event of detail.events ?? []) {
+    byKey.set(getRunEventKey(event), event)
+  }
+  for (const event of events) {
+    if (String(event.runId) === String(detail.basicId)) {
+      byKey.set(getRunEventKey(event), event)
+    }
+  }
+  detail.events = [...byKey.values()].sort(compareRunEvents)
+}
+
+function mergeRunGuidance(guidance: NonNullable<AiTaskRunDetailDto['guidance']>[number]) {
+  const detail = runHistoryDetail.value
+  if (!detail || String(guidance.runId) !== String(detail.basicId)) {
+    return
+  }
+
+  const byId = new Map(detail.guidance.map(item => [String(item.basicId), item]))
+  byId.set(String(guidance.basicId), guidance)
+  detail.guidance = [...byId.values()].sort((a, b) => String(a.createdTime).localeCompare(String(b.createdTime)))
+}
+
+function getRunEventKey(event: AiTaskRunEventDto) {
+  return `${event.runId}:${event.sequence}:${event.basicId}`
+}
+
+function getLastRunEventSequence() {
+  const events = runHistoryDetail.value?.events ?? []
+  return events.reduce((max, event) => Math.max(max, event.sequence), 0)
+}
+
+async function loadRunEventsOnce() {
+  const detail = runHistoryDetail.value
+  if (!detail) {
+    return
+  }
+
+  try {
+    const events = await aiTaskApi.runEvents(detail.basicId, getLastRunEventSequence())
+    mergeRunEvents(events)
+    if (events.some(event => isTerminalRunEvent(event.eventType))) {
+      await refreshSelectedRunDetail(false)
+    }
+  }
+  catch {
+    // 实时预览失败不阻断页面；用户手动刷新详情仍可恢复。
+  }
+}
+
+async function refreshSelectedRunDetail(showError = true) {
+  const detail = runHistoryDetail.value
+  if (!detail) {
+    return
+  }
+
+  try {
+    const updated = await aiTaskApi.runDetail(detail.basicId)
+    runHistoryDetail.value = normalizeRunDetail(updated)
+    if (runHistoryTask.value) {
+      runHistoryRows.value = await aiTaskApi.runList(runHistoryTask.value.basicId)
+    }
+  }
+  catch {
+    if (showError) {
+      message.error(t('develop.ai_task.load_run_history_failed'))
+    }
+  }
+}
+
+async function appendRunGuidance() {
+  const detail = runHistoryDetail.value
+  const content = runGuidanceInput.value.trim()
+  if (!detail || !content) {
+    return
+  }
+
+  runGuidanceSubmitting.value = true
+  try {
+    const guidance = await aiTaskApi.appendRunGuidance({
+      runId: detail.basicId,
+      content,
+      clientRequestId: createClientRequestId(),
+    })
+    mergeRunGuidance(guidance)
+    runGuidanceInput.value = ''
+    await loadRunEventsOnce()
+    message.success(t('develop.ai_task.run_guidance_submit_success'))
+  }
+  catch {
+    message.error(t('develop.ai_task.run_guidance_submit_failed'))
+  }
+  finally {
+    runGuidanceSubmitting.value = false
+  }
+}
+
+function createClientRequestId() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function isRunActive(status: AiTaskRunStatus) {
+  return status === AiTaskRunStatus.Queued || status === AiTaskRunStatus.Running
+}
+
+function isTerminalRunEvent(eventType: AiTaskRunEventType) {
+  return eventType === AiTaskRunEventType.RunSucceeded
+    || eventType === AiTaskRunEventType.RunFailed
+    || eventType === AiTaskRunEventType.RunCanceled
+}
+
+function handleAiTaskRunEventReceived(payload: unknown) {
+  const event = payload as AiTaskRunEventDto | null
+  if (!event?.runId || !runHistoryDetail.value || String(event.runId) !== String(runHistoryDetail.value.basicId)) {
+    return
+  }
+
+  mergeRunEvents([event])
+  if (isTerminalRunEvent(event.eventType)) {
+    void refreshSelectedRunDetail(false)
+  }
+}
+
+function syncRunEventPolling() {
+  stopRunEventPolling()
+  const detail = runHistoryDetail.value
+  if (!runHistoryVisible.value || !detail || !isRunActive(detail.runStatus)) {
+    return
+  }
+
+  runEventPollingTimer = setInterval(() => {
+    void loadRunEventsOnce()
+  }, RUN_EVENT_POLLING_INTERVAL_MS)
+}
+
+function stopRunEventPolling() {
+  if (runEventPollingTimer) {
+    clearInterval(runEventPollingTimer)
+    runEventPollingTimer = null
   }
 }
 
@@ -773,6 +955,41 @@ function getRunStatusTagType(status: AiTaskRunStatus) {
     default:
       return 'info'
   }
+}
+
+function getRunEventLabel(eventType: AiTaskRunEventType) {
+  return t(`develop.ai_task.run_event_${eventType}`)
+}
+
+function getRunEventRoleLabel(role: AiTaskRunEventRole) {
+  return t(`develop.ai_task.run_event_role_${role}`)
+}
+
+function getRunGuidanceStatusLabel(status: AiTaskRunGuidanceStatus) {
+  return t(`develop.ai_task.run_guidance_status_${status}`)
+}
+
+function getRunEventTimelineType(eventType: AiTaskRunEventType) {
+  if (eventType === AiTaskRunEventType.RunSucceeded || eventType === AiTaskRunEventType.GuidanceApplied) {
+    return 'success'
+  }
+  if (eventType === AiTaskRunEventType.RunFailed || eventType === AiTaskRunEventType.GuidanceIgnored) {
+    return 'error'
+  }
+  if (eventType === AiTaskRunEventType.GuidanceReceived || eventType === AiTaskRunEventType.RunRequeued) {
+    return 'warning'
+  }
+  return 'info'
+}
+
+function getRunGuidanceTagType(status: AiTaskRunGuidanceStatus) {
+  if (status === AiTaskRunGuidanceStatus.Applied) {
+    return 'success'
+  }
+  if (status === AiTaskRunGuidanceStatus.Ignored) {
+    return 'warning'
+  }
+  return 'info'
 }
 
 function formatDateTime(value?: string | null) {
@@ -829,8 +1046,20 @@ function handleDelete(row: AiTaskListItemDto) {
   })
 }
 
+watch(
+  [runHistoryVisible, () => runHistoryDetail.value?.basicId, () => runHistoryDetail.value?.runStatus],
+  () => syncRunEventPolling(),
+)
+
 onMounted(() => {
   void loadLookups()
+  signalR.on(AI_TASK_RUN_EVENT_RECEIVED, handleAiTaskRunEventReceived)
+  void signalR.start()
+})
+
+onUnmounted(() => {
+  signalR.off(AI_TASK_RUN_EVENT_RECEIVED, handleAiTaskRunEventReceived)
+  stopRunEventPolling()
 })
 </script>
 
@@ -1059,7 +1288,7 @@ onMounted(() => {
 
     <NDrawer
       v-model:show="runHistoryVisible"
-      :width="720"
+      :width="920"
       placement="right"
     >
       <NDrawerContent :title="runHistoryTitle" closable>
@@ -1093,7 +1322,91 @@ onMounted(() => {
                 <span>{{ t('develop.ai_task.run_col_duration') }}</span>
                 <strong>{{ formatDuration(runHistoryDetail.durationMilliseconds) }}</strong>
               </div>
+              <div class="ai-task-run-meta__item">
+                <span>{{ t('develop.ai_task.run_detail_runner') }}</span>
+                <strong>{{ runHistoryDetail.runnerKind || '-' }}</strong>
+              </div>
+              <div class="ai-task-run-meta__item">
+                <span>{{ t('develop.ai_task.run_detail_agent_session') }}</span>
+                <strong>{{ runHistoryDetail.agentSessionId || '-' }}</strong>
+              </div>
             </div>
+
+            <section class="ai-task-run-block">
+              <div class="ai-task-section-title ai-task-section-title--row">
+                <span>{{ t('develop.ai_task.run_detail_events') }}</span>
+                <NButton size="tiny" quaternary :loading="runHistoryLoading" @click="refreshSelectedRunDetail()">
+                  {{ t('common.actions.refresh') }}
+                </NButton>
+              </div>
+              <NTimeline v-if="runHistoryDetail.events?.length" class="ai-task-run-events">
+                <NTimelineItem
+                  v-for="event in runHistoryDetail.events"
+                  :key="`${event.runId}-${event.sequence}-${event.basicId}`"
+                  :time="formatDateTime(event.createdTime)"
+                  :type="getRunEventTimelineType(event.eventType)"
+                >
+                  <template #header>
+                    <div class="ai-task-run-event-header">
+                      <span>{{ getRunEventLabel(event.eventType) }}</span>
+                      <NTag size="small" round :bordered="false">
+                        {{ getRunEventRoleLabel(event.role) }}
+                      </NTag>
+                    </div>
+                  </template>
+                  <pre v-if="event.content" class="ai-task-run-event-content">{{ event.content }}</pre>
+                </NTimelineItem>
+              </NTimeline>
+              <div v-else class="ai-task-run-empty">
+                {{ t('develop.ai_task.run_events_empty') }}
+              </div>
+            </section>
+
+            <section v-if="canAppendRunGuidance" class="ai-task-run-block">
+              <div class="ai-task-section-title">
+                {{ t('develop.ai_task.run_guidance_title') }}
+              </div>
+              <NSpace vertical class="ai-task-run-guidance-form">
+                <NInput
+                  v-model:value="runGuidanceInput"
+                  type="textarea"
+                  :autosize="{ minRows: 2, maxRows: 5 }"
+                  :maxlength="4000"
+                  show-count
+                  :placeholder="t('develop.ai_task.run_guidance_placeholder')"
+                />
+                <NSpace justify="end">
+                  <NButton
+                    type="primary"
+                    :disabled="!runGuidanceInput.trim()"
+                    :loading="runGuidanceSubmitting"
+                    @click="appendRunGuidance"
+                  >
+                    {{ t('develop.ai_task.run_guidance_submit') }}
+                  </NButton>
+                </NSpace>
+              </NSpace>
+            </section>
+
+            <section v-if="runHistoryDetail.guidance?.length" class="ai-task-run-block">
+              <div class="ai-task-section-title">
+                {{ t('develop.ai_task.run_guidance_history') }}
+              </div>
+              <div class="ai-task-run-guidance-list">
+                <div v-for="item in runHistoryDetail.guidance" :key="item.basicId" class="ai-task-run-guidance-item">
+                  <div class="ai-task-run-guidance-item__meta">
+                    <span>{{ formatDateTime(item.createdTime) }}</span>
+                    <NTag size="small" round :bordered="false" :type="getRunGuidanceTagType(item.status)">
+                      {{ getRunGuidanceStatusLabel(item.status) }}
+                    </NTag>
+                  </div>
+                  <pre>{{ item.content }}</pre>
+                  <div v-if="item.ignoredReason" class="ai-task-run-guidance-item__reason">
+                    {{ item.ignoredReason }}
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <section class="ai-task-run-block">
               <div class="ai-task-section-title">
@@ -1154,6 +1467,13 @@ onMounted(() => {
   color: var(--n-text-color-2);
   font-size: 13px;
   font-weight: 600;
+}
+
+.ai-task-section-title--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .full-input {
@@ -1224,6 +1544,35 @@ onMounted(() => {
   min-width: 0;
 }
 
+.ai-task-run-events {
+  padding: 2px 0 0 2px;
+}
+
+.ai-task-run-event-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ai-task-run-event-content {
+  max-height: 160px;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  overflow: auto;
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+  background: var(--n-color);
+  color: var(--n-text-color);
+  font-family: var(--n-font-family-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .ai-task-run-block pre {
   max-height: 220px;
   margin: 0;
@@ -1238,6 +1587,48 @@ onMounted(() => {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.ai-task-run-guidance-form {
+  width: 100%;
+}
+
+.ai-task-run-guidance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-task-run-guidance-item {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+}
+
+.ai-task-run-guidance-item__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--n-text-color-3);
+  font-size: 12px;
+}
+
+.ai-task-run-guidance-item pre {
+  max-height: 160px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  background: transparent;
+}
+
+.ai-task-run-guidance-item__reason {
+  margin-top: 8px;
+  color: var(--n-text-color-3);
+  font-size: 12px;
 }
 
 .ai-task-run-empty {

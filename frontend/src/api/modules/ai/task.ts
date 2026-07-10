@@ -1,11 +1,14 @@
 import type { ApiId } from '../../types'
 import type {
   AiTaskCreateDto,
+  AiTaskAppendGuidanceDto,
   AiTaskDetailDto,
   AiTaskExecutionResultDto,
   AiTaskListItemDto,
   AiTaskRunDetailDto,
   AiTaskRunDto,
+  AiTaskRunEventDto,
+  AiTaskRunGuidanceDto,
   AiTaskRunListItemDto,
   AiTaskStatusUpdateDto,
   AiTaskUpdateDto,
@@ -31,6 +34,9 @@ export const aiTaskApi = {
   run(id: ApiId) {
     return command.post<AiTaskExecutionResultDto, AiTaskRunDto>('Run', { basicId: id })
   },
+  appendRunGuidance(input: AiTaskAppendGuidanceDto) {
+    return command.post<AiTaskRunGuidanceDto, AiTaskAppendGuidanceDto>('AppendRunGuidance', input)
+  },
   list() {
     return query.get<AiTaskListItemDto[]>('List')
   },
@@ -42,5 +48,8 @@ export const aiTaskApi = {
   },
   runDetail(runId: ApiId) {
     return query.get<AiTaskRunDetailDto | null>(`RunDetail/${formatDynamicApiRouteValue(runId)}`)
+  },
+  runEvents(runId: ApiId, afterSequence = 0) {
+    return query.get<AiTaskRunEventDto[]>(`RunEvents/${formatDynamicApiRouteValue(runId)}?afterSequence=${afterSequence}`)
   },
 }
