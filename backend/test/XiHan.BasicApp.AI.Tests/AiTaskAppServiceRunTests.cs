@@ -39,7 +39,7 @@ public sealed class AiTaskAppServiceRunTests
         var taskRepository = new InMemoryAiTaskRepository(task);
         var runRepository = new InMemoryAiTaskRunRepository();
         var chat = new FakeAiTaskChatService("Brief result");
-        var executor = new AiTaskExecutor(taskRepository, runRepository, chat, new AiTaskPromptRenderer(new FakeAiPromptStore()));
+        var executor = AiTaskExecutorTestFactory.Create(taskRepository, runRepository, chat);
         var runQueue = new FakeAiTaskRunQueue();
         var appService = new AiTaskAppService(
             new AiTaskDomainService(taskRepository),

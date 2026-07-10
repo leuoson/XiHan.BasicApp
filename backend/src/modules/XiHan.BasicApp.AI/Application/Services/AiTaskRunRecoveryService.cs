@@ -14,6 +14,7 @@
 
 using Microsoft.Extensions.Logging;
 using XiHan.BasicApp.AI.Domain.Entities;
+using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.BasicApp.AI.Domain.Repositories;
 
 namespace XiHan.BasicApp.AI.Application.Services;
@@ -30,6 +31,7 @@ public sealed class AiTaskRunRecoveryService
     private readonly IAiTaskRepository _taskRepository;
     private readonly IAiTaskRunQueue _runQueue;
     private readonly TimeProvider _timeProvider;
+    private readonly IAiTaskRunEventService _eventService;
     private readonly ILogger<AiTaskRunRecoveryService> _logger;
 
     /// <summary>
@@ -40,12 +42,14 @@ public sealed class AiTaskRunRecoveryService
         IAiTaskRepository taskRepository,
         IAiTaskRunQueue runQueue,
         TimeProvider timeProvider,
+        IAiTaskRunEventService eventService,
         ILogger<AiTaskRunRecoveryService> logger)
     {
         _runRepository = runRepository;
         _taskRepository = taskRepository;
         _runQueue = runQueue;
         _timeProvider = timeProvider;
+        _eventService = eventService;
         _logger = logger;
     }
 
@@ -98,7 +102,15 @@ public sealed class AiTaskRunRecoveryService
 
             if (CanRetry(run, task))
             {
-                await _runRepository.RequeueAsync(run.BasicId, now, "执行器中断或租约过期，已重新排队。", cancellationToken);
+                const string message = "执行器中断或租约过期，已重新排队。";
+                await _runRepository.RequeueAsync(run.BasicId, now, message, cancellationToken);
+                await _eventService.AppendAsync(
+                    run.BasicId,
+                    AiTaskRunEventType.RunRequeued,
+                    AiTaskRunEventRole.System,
+                    message,
+                    null,
+                    cancellationToken);
                 await _runQueue.EnqueueAsync(run.BasicId, cancellationToken);
                 _logger.LogWarning("AI 任务运行恢复：运行记录 {RunId} 已重新排队，AttemptCount={AttemptCount}, MaxRetryCount={MaxRetryCount}",
                     run.BasicId, run.AttemptCount, task.MaxRetryCount);
@@ -130,6 +142,13 @@ public sealed class AiTaskRunRecoveryService
     {
         var duration = Math.Max(0, (long)(now - run.StartedTime).TotalMilliseconds);
         await _runRepository.FailAsync(run.BasicId, now, duration, message, cancellationToken);
+        await _eventService.AppendAsync(
+            run.BasicId,
+            AiTaskRunEventType.RunFailed,
+            AiTaskRunEventRole.System,
+            message,
+            null,
+            cancellationToken);
         _logger.LogWarning("AI 任务运行恢复：运行记录 {RunId} 已标记失败，原因：{Message}", run.BasicId, message);
     }
 }

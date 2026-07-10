@@ -12,11 +12,13 @@
 
 #endregion <<版权版本注释>>
 
+using Microsoft.Extensions.Options;
 using XiHan.BasicApp.AI.Application.Dtos;
 using XiHan.BasicApp.AI.Application.Services;
 using XiHan.BasicApp.AI.Domain.Entities;
 using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.BasicApp.AI.Domain.Repositories;
+using XiHan.BasicApp.AI.Infrastructure.Configuration;
 using XiHan.BasicApp.Core.Dtos;
 using XiHan.BasicApp.Saas.Domain.Enums;
 using XiHan.Framework.AI.Abstractions.Prompts;
@@ -24,6 +26,32 @@ using XiHan.Framework.Domain.Shared.Paging.Dtos;
 using XiHan.Framework.Domain.Shared.Paging.Models;
 
 namespace XiHan.BasicApp.AI.Tests;
+
+internal static class AiTaskExecutorTestFactory
+{
+    public static AiTaskExecutor Create(
+        IAiTaskRepository taskRepository,
+        IAiTaskRunRepository runRepository,
+        FakeAiTaskChatService chat,
+        FakeAiPromptStore? promptStore = null,
+        FakeAiTaskRunEventService? eventService = null,
+        InMemoryAiTaskRunGuidanceRepository? guidanceRepository = null)
+    {
+        eventService ??= new FakeAiTaskRunEventService();
+        guidanceRepository ??= new InMemoryAiTaskRunGuidanceRepository();
+        var runner = new PlainChatAiTaskRunner(chat, eventService);
+        var resolver = new AiTaskRunnerResolver(
+            Options.Create(new AiTaskRuntimeOptions { DefaultRunnerKind = AiTaskRunnerKind.PlainChat }),
+            [runner]);
+        return new AiTaskExecutor(
+            taskRepository,
+            runRepository,
+            resolver,
+            new AiTaskPromptRenderer(promptStore ?? new FakeAiPromptStore()),
+            eventService,
+            guidanceRepository);
+    }
+}
 
 internal sealed class InMemoryAiTaskRepository : IAiTaskRepository
 {
@@ -118,6 +146,9 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
                 LeaseExpiresAt = entity.LeaseExpiresAt,
                 LastHeartbeatTime = entity.LastHeartbeatTime,
                 AttemptCount = entity.AttemptCount,
+                RunnerKind = entity.RunnerKind,
+                RunnerVersion = entity.RunnerVersion,
+                AgentSessionId = entity.AgentSessionId,
                 PromptSnapshot = entity.PromptSnapshot,
                 ResultText = entity.ResultText,
                 ErrorMessage = entity.ErrorMessage,
@@ -165,7 +196,7 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
         return Task.FromResult<SysAiTaskRun?>(run);
     }
 
-    public Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, CancellationToken cancellationToken = default)
+    public Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, string? runnerKind, string? runnerVersion, string? agentSessionId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var run = Runs.FirstOrDefault(run => run.BasicId == id
@@ -184,6 +215,9 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
         run.LastHeartbeatTime = null;
         run.PromptSnapshot = promptSnapshot;
         run.ResultText = resultText;
+        run.RunnerKind = runnerKind;
+        run.RunnerVersion = runnerVersion;
+        run.AgentSessionId = agentSessionId;
         run.ErrorMessage = null;
         return Task.FromResult<SysAiTaskRun?>(run);
     }

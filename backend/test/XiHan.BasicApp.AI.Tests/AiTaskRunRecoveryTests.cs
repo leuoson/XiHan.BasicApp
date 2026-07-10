@@ -38,11 +38,13 @@ public sealed class AiTaskRunRecoveryTests
             RunStatus = AiTaskRunStatus.Queued
         });
         var queue = new FakeAiTaskRunQueue();
+        var eventService = new FakeAiTaskRunEventService();
         var recovery = new AiTaskRunRecoveryService(
             runRepository,
             taskRepository,
             queue,
             new FakeTimeProvider(now),
+            eventService,
             NullLogger<AiTaskRunRecoveryService>.Instance);
 
         await recovery.RecoverAsync();
@@ -69,11 +71,13 @@ public sealed class AiTaskRunRecoveryTests
             LeaseExpiresAt = now.AddMinutes(-1)
         });
         var queue = new FakeAiTaskRunQueue();
+        var eventService = new FakeAiTaskRunEventService();
         var recovery = new AiTaskRunRecoveryService(
             runRepository,
             taskRepository,
             queue,
             new FakeTimeProvider(now),
+            eventService,
             NullLogger<AiTaskRunRecoveryService>.Instance);
 
         await recovery.RecoverAsync();
@@ -83,6 +87,7 @@ public sealed class AiTaskRunRecoveryTests
         Assert.Null(runRepository.Runs[0].LeaseOwner);
         Assert.Null(runRepository.Runs[0].LeaseExpiresAt);
         Assert.Contains("重新排队", runRepository.Runs[0].ErrorMessage);
+        Assert.Contains(eventService.Events, e => e.RunId == 42 && e.EventType == AiTaskRunEventType.RunRequeued);
     }
 
     [Fact]
@@ -103,11 +108,13 @@ public sealed class AiTaskRunRecoveryTests
             LeaseExpiresAt = null
         });
         var queue = new FakeAiTaskRunQueue();
+        var eventService = new FakeAiTaskRunEventService();
         var recovery = new AiTaskRunRecoveryService(
             runRepository,
             taskRepository,
             queue,
             new FakeTimeProvider(now),
+            eventService,
             NullLogger<AiTaskRunRecoveryService>.Instance);
 
         await recovery.RecoverAsync();
@@ -116,6 +123,7 @@ public sealed class AiTaskRunRecoveryTests
         Assert.Equal(AiTaskRunStatus.Failed, runRepository.Runs[0].RunStatus);
         Assert.NotNull(runRepository.Runs[0].EndedTime);
         Assert.Contains("执行器中断", runRepository.Runs[0].ErrorMessage);
+        Assert.Contains(eventService.Events, e => e.RunId == 42 && e.EventType == AiTaskRunEventType.RunFailed);
     }
 
     private static SysAiTask CreateTask(int maxRetryCount)

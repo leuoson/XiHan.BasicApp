@@ -29,8 +29,10 @@ public sealed class AiTaskExecutor
 
     private readonly IAiTaskRepository _taskRepository;
     private readonly IAiTaskRunRepository _runRepository;
-    private readonly IAiTaskChatService _chatService;
+    private readonly AiTaskRunnerResolver _runnerResolver;
     private readonly AiTaskPromptRenderer _promptRenderer;
+    private readonly IAiTaskRunEventService _eventService;
+    private readonly IAiTaskRunGuidanceRepository _guidanceRepository;
 
     /// <summary>
     /// 构造函数
@@ -38,13 +40,17 @@ public sealed class AiTaskExecutor
     public AiTaskExecutor(
         IAiTaskRepository taskRepository,
         IAiTaskRunRepository runRepository,
-        IAiTaskChatService chatService,
-        AiTaskPromptRenderer promptRenderer)
+        AiTaskRunnerResolver runnerResolver,
+        AiTaskPromptRenderer promptRenderer,
+        IAiTaskRunEventService eventService,
+        IAiTaskRunGuidanceRepository guidanceRepository)
     {
         _taskRepository = taskRepository;
         _runRepository = runRepository;
-        _chatService = chatService;
+        _runnerResolver = runnerResolver;
         _promptRenderer = promptRenderer;
+        _eventService = eventService;
+        _guidanceRepository = guidanceRepository;
     }
 
     /// <summary>
@@ -62,13 +68,21 @@ public sealed class AiTaskExecutor
     public async Task<SysAiTaskRun> StartRunAsync(long aiTaskId, CancellationToken cancellationToken = default)
     {
         var task = await GetRunnableTaskOrThrowAsync(aiTaskId, cancellationToken);
-        return await _runRepository.AddAsync(new SysAiTaskRun
+        var run = await _runRepository.AddAsync(new SysAiTaskRun
         {
             AiTaskId = task.BasicId,
             AiTaskCode = task.AiTaskCode,
             StartedTime = DateTimeOffset.Now,
             RunStatus = AiTaskRunStatus.Queued
         }, cancellationToken);
+        _ = await _eventService.AppendAsync(
+            run.BasicId,
+            AiTaskRunEventType.RunQueued,
+            AiTaskRunEventRole.System,
+            "AI 任务运行已排队。",
+            null,
+            cancellationToken);
+        return run;
     }
 
     /// <summary>
@@ -126,10 +140,36 @@ public sealed class AiTaskExecutor
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, task.TimeoutSeconds)));
             var executionToken = timeoutCts.Token;
 
+            await _eventService.AppendAsync(
+                run.BasicId,
+                AiTaskRunEventType.RunStarted,
+                AiTaskRunEventRole.System,
+                "AI 任务开始执行。",
+                null,
+                executionToken);
+
             var prompt = await _promptRenderer.RenderAsync(task, executionToken);
             run.PromptSnapshot = prompt;
+            await _eventService.AppendAsync(
+                run.BasicId,
+                AiTaskRunEventType.PromptRendered,
+                AiTaskRunEventRole.System,
+                "AI 任务提示词已渲染。",
+                null,
+                executionToken);
 
-            var resultText = await _chatService.CompleteAsync(task, prompt, executionToken);
+            var pendingGuidance = await _guidanceRepository.GetPendingByRunIdAsync(run.BasicId, executionToken);
+            var runner = _runnerResolver.Resolve();
+            var runnerResult = await runner.RunAsync(new AiTaskRunContext(task, run, prompt, pendingGuidance), executionToken);
+            if (pendingGuidance.Count > 0)
+            {
+                await _guidanceRepository.MarkAppliedAsync(
+                    pendingGuidance.Select(g => g.BasicId).ToList(),
+                    DateTimeOffset.Now,
+                    CancellationToken.None);
+            }
+
+            var resultText = runnerResult.ResultText;
             stopwatch.Stop();
 
             var completedRun = await _runRepository.CompleteRunningAsync(
@@ -139,12 +179,23 @@ public sealed class AiTaskExecutor
                 stopwatch.ElapsedMilliseconds,
                 prompt,
                 resultText,
+                runner.Kind.ToString(),
+                runner.Version,
+                runnerResult.AgentSessionId,
                 cancellationToken);
             if (completedRun is null)
             {
                 return await LeaseLostResultAsync(run.BasicId, cancellationToken);
             }
 
+            await IgnorePendingGuidanceAsync(run.BasicId, "运行已结束，未被执行器消费。", CancellationToken.None);
+            await _eventService.AppendAsync(
+                run.BasicId,
+                AiTaskRunEventType.RunSucceeded,
+                AiTaskRunEventRole.System,
+                "AI 任务执行成功。",
+                null,
+                cancellationToken);
             return AiTaskExecutionResult.Success(resultText, completedRun.BasicId, completedRun.RunStatus);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -169,6 +220,14 @@ public sealed class AiTaskExecutor
                 return await LeaseLostResultAsync(run.BasicId, CancellationToken.None);
             }
 
+            await IgnorePendingGuidanceAsync(run.BasicId, "运行失败，未被执行器消费。", CancellationToken.None);
+            await _eventService.AppendAsync(
+                run.BasicId,
+                AiTaskRunEventType.RunFailed,
+                AiTaskRunEventRole.System,
+                errorMessage,
+                null,
+                CancellationToken.None);
             return AiTaskExecutionResult.Failure(errorMessage, run.BasicId, AiTaskRunStatus.Failed);
         }
         catch (Exception ex)
@@ -188,6 +247,14 @@ public sealed class AiTaskExecutor
                 return await LeaseLostResultAsync(run.BasicId, cancellationToken);
             }
 
+            await IgnorePendingGuidanceAsync(run.BasicId, "运行失败，未被执行器消费。", CancellationToken.None);
+            await _eventService.AppendAsync(
+                run.BasicId,
+                AiTaskRunEventType.RunFailed,
+                AiTaskRunEventRole.System,
+                ex.Message,
+                null,
+                CancellationToken.None);
             return AiTaskExecutionResult.Failure(ex.Message, failedRun.BasicId, failedRun.RunStatus);
         }
     }
@@ -204,6 +271,17 @@ public sealed class AiTaskExecutor
             "AI 任务运行记录租约已失效，执行结果已忽略。",
             runId,
             current?.RunStatus ?? AiTaskRunStatus.Failed);
+    }
+
+    private async Task IgnorePendingGuidanceAsync(long runId, string reason, CancellationToken cancellationToken)
+    {
+        var pendingGuidance = await _guidanceRepository.GetPendingByRunIdAsync(runId, cancellationToken);
+        if (pendingGuidance.Count == 0)
+        {
+            return;
+        }
+
+        await _guidanceRepository.MarkIgnoredAsync(pendingGuidance.Select(g => g.BasicId).ToList(), reason, cancellationToken);
     }
 
     private async Task<SysAiTask> GetRunnableTaskOrThrowAsync(long aiTaskId, CancellationToken cancellationToken)

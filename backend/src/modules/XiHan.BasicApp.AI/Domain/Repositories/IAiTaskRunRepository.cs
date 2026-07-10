@@ -44,7 +44,7 @@ public interface IAiTaskRunRepository
     /// <summary>
     /// 根据执行租约原子完成运行记录
     /// </summary>
-    Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, CancellationToken cancellationToken = default);
+    Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, string? runnerKind, string? runnerVersion, string? agentSessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 根据执行租约原子标记运行记录失败

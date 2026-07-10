@@ -93,11 +93,11 @@ public sealed class AiTaskRunGuidanceTests
             PromptText = "Base prompt.",
             Status = EnableStatus.Enabled
         });
-        var executor = new AiTaskExecutor(
+        var executor = AiTaskExecutorTestFactory.Create(
             taskRepository,
             runRepository,
             new FakeAiTaskChatService("unused"),
-            new AiTaskPromptRenderer(new FakeAiPromptStore()));
+            eventService: eventService);
 
         return new AiTaskAppService(
             new AiTaskDomainService(taskRepository),

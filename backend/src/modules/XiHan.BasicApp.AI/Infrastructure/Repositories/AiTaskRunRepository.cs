@@ -68,7 +68,7 @@ public sealed class AiTaskRunRepository(ISqlSugarClientResolver clientResolver)
     }
 
     /// <inheritdoc />
-    public async Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, CancellationToken cancellationToken = default)
+    public async Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, string? runnerKind, string? runnerVersion, string? agentSessionId, CancellationToken cancellationToken = default)
     {
         if (id <= 0)
         {
@@ -90,6 +90,9 @@ public sealed class AiTaskRunRepository(ISqlSugarClientResolver clientResolver)
             .SetColumns(run => run.LastHeartbeatTime == null)
             .SetColumns(run => run.PromptSnapshot == promptSnapshot)
             .SetColumns(run => run.ResultText == resultText)
+            .SetColumns(run => run.RunnerKind == runnerKind)
+            .SetColumns(run => run.RunnerVersion == runnerVersion)
+            .SetColumns(run => run.AgentSessionId == agentSessionId)
             .SetColumns(run => run.ErrorMessage == null)
             .Where(run => run.BasicId == id
                 && run.RunStatus == AiTaskRunStatus.Running
