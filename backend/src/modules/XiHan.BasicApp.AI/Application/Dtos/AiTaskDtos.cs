@@ -185,4 +185,6 @@ public sealed class AiTaskRunDetailDto : AiTaskRunListItemDto
     public DateTimeOffset? LastHeartbeatTime { get; set; }
     public string? PromptSnapshot { get; set; }
     public string? ResultText { get; set; }
+    public List<AiTaskRunEventDto> Events { get; set; } = [];
+    public List<AiTaskRunGuidanceDto> Guidance { get; set; } = [];
 }

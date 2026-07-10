@@ -12,6 +12,7 @@
 
 #endregion <<版权版本注释>>
 
+using XiHan.BasicApp.AI.Application.Dtos;
 using XiHan.BasicApp.AI.Application.Services;
 using XiHan.BasicApp.AI.Domain.Entities;
 using XiHan.BasicApp.AI.Domain.Enums;
@@ -437,6 +438,29 @@ internal sealed class InMemoryAiTaskRunEventRepository : IAiTaskRunEventReposito
             .Where(e => e.RunId == runId && e.Sequence > afterSequence)
             .OrderBy(e => e.Sequence)
             .ToList());
+    }
+}
+
+internal sealed class FakeAiTaskRunEventService : IAiTaskRunEventService
+{
+    public List<AiTaskRunEventDto> Events { get; } = [];
+
+    public Task<AiTaskRunEventDto> AppendAsync(long runId, AiTaskRunEventType eventType, AiTaskRunEventRole role, string? content, string? payloadJson, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var dto = new AiTaskRunEventDto
+        {
+            BasicId = Events.Count + 1,
+            RunId = runId,
+            Sequence = Events.Count(e => e.RunId == runId) + 1,
+            EventType = eventType,
+            Role = role,
+            Content = content,
+            PayloadJson = payloadJson,
+            CreatedTime = DateTimeOffset.Now
+        };
+        Events.Add(dto);
+        return Task.FromResult(dto);
     }
 }
 

@@ -32,11 +32,7 @@ public sealed class AiTaskRunHistoryQueryTests
             new SysAiTaskRun(2) { AiTaskId = 8, AiTaskCode = "other", StartedTime = DateTimeOffset.Parse("2026-07-09T09:00:00+08:00"), RunStatus = AiTaskRunStatus.Success },
             new SysAiTaskRun(3) { AiTaskId = 7, AiTaskCode = "morning-news", StartedTime = DateTimeOffset.Parse("2026-07-09T10:00:00+08:00"), RunStatus = AiTaskRunStatus.Failed, ErrorMessage = "failed" }
         ]);
-        var service = new AiTaskQueryService(
-            new InMemoryAiTaskRepository(),
-            new InMemoryAiTaskToolPolicyRepository([]),
-            new InMemoryAiToolRepository(new SysAiTool(11) { ToolCode = "knowledge", ToolName = "Knowledge", Status = EnableStatus.Enabled }),
-            runRepository);
+        var service = CreateQueryService(runRepository);
 
         var runs = await service.GetRunListAsync(7);
 
@@ -59,16 +55,72 @@ public sealed class AiTaskRunHistoryQueryTests
             PromptSnapshot = "Write the daily summary.",
             ResultText = "Brief result"
         });
-        var service = new AiTaskQueryService(
-            new InMemoryAiTaskRepository(),
-            new InMemoryAiTaskToolPolicyRepository([]),
-            new InMemoryAiToolRepository(new SysAiTool(11) { ToolCode = "knowledge", ToolName = "Knowledge", Status = EnableStatus.Enabled }),
-            runRepository);
+        var service = CreateQueryService(runRepository);
 
         var detail = await service.GetRunDetailAsync(3);
 
         Assert.NotNull(detail);
         Assert.Equal("Write the daily summary.", detail.PromptSnapshot);
         Assert.Equal("Brief result", detail.ResultText);
+    }
+
+    [Fact]
+    public async Task GetRunEventsAsync_returns_events_after_sequence()
+    {
+        var runRepository = new InMemoryAiTaskRunRepository();
+        runRepository.Runs.Add(new SysAiTaskRun(42)
+        {
+            AiTaskId = 7,
+            AiTaskCode = "daily",
+            RunStatus = AiTaskRunStatus.Running
+        });
+        var eventRepository = new InMemoryAiTaskRunEventRepository();
+        await eventRepository.AddAsync(new SysAiTaskRunEvent { RunId = 42, EventType = AiTaskRunEventType.RunQueued, Role = AiTaskRunEventRole.System });
+        await eventRepository.AddAsync(new SysAiTaskRunEvent { RunId = 42, EventType = AiTaskRunEventType.RunStarted, Role = AiTaskRunEventRole.System });
+        var service = CreateQueryService(runRepository, eventRepository);
+
+        var result = await service.GetRunEventsAsync(42, afterSequence: 1);
+
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Sequence);
+        Assert.Equal(AiTaskRunEventType.RunStarted, result[0].EventType);
+    }
+
+    [Fact]
+    public async Task GetRunDetailAsync_returns_events_and_guidance()
+    {
+        var runRepository = new InMemoryAiTaskRunRepository();
+        runRepository.Runs.Add(new SysAiTaskRun(42)
+        {
+            AiTaskId = 7,
+            AiTaskCode = "daily",
+            RunStatus = AiTaskRunStatus.Running
+        });
+        var eventRepository = new InMemoryAiTaskRunEventRepository();
+        var guidanceRepository = new InMemoryAiTaskRunGuidanceRepository();
+        await eventRepository.AddAsync(new SysAiTaskRunEvent { RunId = 42, EventType = AiTaskRunEventType.RunStarted, Role = AiTaskRunEventRole.System });
+        await guidanceRepository.AddAsync(new SysAiTaskRunGuidance { RunId = 42, Content = "Focus on overdue items." });
+        var service = CreateQueryService(runRepository, eventRepository, guidanceRepository);
+
+        var detail = await service.GetRunDetailAsync(42);
+
+        Assert.NotNull(detail);
+        Assert.Single(detail.Events);
+        Assert.Single(detail.Guidance);
+        Assert.Equal("Focus on overdue items.", detail.Guidance[0].Content);
+    }
+
+    private static AiTaskQueryService CreateQueryService(
+        InMemoryAiTaskRunRepository? runRepository = null,
+        InMemoryAiTaskRunEventRepository? runEventRepository = null,
+        InMemoryAiTaskRunGuidanceRepository? guidanceRepository = null)
+    {
+        return new AiTaskQueryService(
+            new InMemoryAiTaskRepository(),
+            new InMemoryAiTaskToolPolicyRepository([]),
+            new InMemoryAiToolRepository(new SysAiTool(11) { ToolCode = "knowledge", ToolName = "Knowledge", Status = EnableStatus.Enabled }),
+            runRepository ?? new InMemoryAiTaskRunRepository(),
+            runEventRepository ?? new InMemoryAiTaskRunEventRepository(),
+            guidanceRepository ?? new InMemoryAiTaskRunGuidanceRepository());
     }
 }

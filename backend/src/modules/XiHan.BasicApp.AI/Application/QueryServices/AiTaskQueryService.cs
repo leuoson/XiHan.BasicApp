@@ -33,6 +33,8 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
     private readonly IAiTaskToolPolicyRepository _policyRepository;
     private readonly IAiToolRepository _toolRepository;
     private readonly IAiTaskRunRepository _runRepository;
+    private readonly IAiTaskRunEventRepository _runEventRepository;
+    private readonly IAiTaskRunGuidanceRepository _guidanceRepository;
 
     /// <summary>
     /// 构造函数
@@ -41,12 +43,16 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
         IAiTaskRepository taskRepository,
         IAiTaskToolPolicyRepository policyRepository,
         IAiToolRepository toolRepository,
-        IAiTaskRunRepository runRepository)
+        IAiTaskRunRepository runRepository,
+        IAiTaskRunEventRepository runEventRepository,
+        IAiTaskRunGuidanceRepository guidanceRepository)
     {
         _taskRepository = taskRepository;
         _policyRepository = policyRepository;
         _toolRepository = toolRepository;
         _runRepository = runRepository;
+        _runEventRepository = runEventRepository;
+        _guidanceRepository = guidanceRepository;
     }
 
     /// <inheritdoc />
@@ -127,7 +133,34 @@ public sealed class AiTaskQueryService : AiApplicationService, IAiTaskQueryServi
         cancellationToken.ThrowIfCancellationRequested();
 
         var run = await _runRepository.GetByIdAsync(id, cancellationToken);
-        return run is null ? null : AiTaskApplicationMapper.ToRunDetailDto(run);
+        if (run is null)
+        {
+            return null;
+        }
+
+        var detail = AiTaskApplicationMapper.ToRunDetailDto(run);
+        detail.Events = (await _runEventRepository.GetByRunIdAsync(id, 0, cancellationToken))
+            .Select(AiTaskApplicationMapper.ToRunEventDto)
+            .ToList();
+        detail.Guidance = (await _guidanceRepository.GetByRunIdAsync(id, cancellationToken))
+            .Select(AiTaskApplicationMapper.ToRunGuidanceDto)
+            .ToList();
+        return detail;
+    }
+
+    /// <inheritdoc />
+    [PermissionAuthorize(AiTaskPermissionCodes.Read)]
+    public async Task<IReadOnlyList<AiTaskRunEventDto>> GetRunEventsAsync(long runId, long afterSequence = 0, CancellationToken cancellationToken = default)
+    {
+        if (runId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(runId), "AI 任务运行记录主键必须大于 0。");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var events = await _runEventRepository.GetByRunIdAsync(runId, afterSequence, cancellationToken);
+        return events.Select(AiTaskApplicationMapper.ToRunEventDto).ToList();
     }
 
     private async Task<Dictionary<long, SysAiTool>> LoadToolMapAsync(IReadOnlyList<long> toolIds, CancellationToken cancellationToken)

@@ -43,7 +43,7 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
     private readonly IAiTaskRunQueue _runQueue;
     private readonly IAiTaskRunRepository _runRepository;
     private readonly IAiTaskRunGuidanceRepository _guidanceRepository;
-    private readonly IAiTaskRunEventRepository _runEventRepository;
+    private readonly IAiTaskRunEventService _runEventService;
 
     /// <summary>
     /// 构造函数
@@ -58,7 +58,7 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         IAiTaskRunQueue runQueue,
         IAiTaskRunRepository runRepository,
         IAiTaskRunGuidanceRepository guidanceRepository,
-        IAiTaskRunEventRepository runEventRepository)
+        IAiTaskRunEventService runEventService)
     {
         _taskDomainService = taskDomainService;
         _taskRepository = taskRepository;
@@ -69,7 +69,7 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         _runQueue = runQueue;
         _runRepository = runRepository;
         _guidanceRepository = guidanceRepository;
-        _runEventRepository = runEventRepository;
+        _runEventService = runEventService;
     }
 
     /// <inheritdoc />
@@ -179,13 +179,13 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
             ClientRequestId = input.ClientRequestId
         }, cancellationToken);
 
-        _ = await _runEventRepository.AddAsync(new SysAiTaskRunEvent
-        {
-            RunId = input.RunId,
-            EventType = AiTaskRunEventType.GuidanceReceived,
-            Role = AiTaskRunEventRole.User,
-            Content = content
-        }, cancellationToken);
+        _ = await _runEventService.AppendAsync(
+            input.RunId,
+            AiTaskRunEventType.GuidanceReceived,
+            AiTaskRunEventRole.User,
+            content,
+            null,
+            cancellationToken);
 
         return AiTaskApplicationMapper.ToRunGuidanceDto(guidance);
     }

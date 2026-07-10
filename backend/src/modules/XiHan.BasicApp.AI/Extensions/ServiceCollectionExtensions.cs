@@ -236,6 +236,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IAiTaskRunQueue, AiTaskRedisRunQueue>();
         services.AddScoped<AiTaskRunRecoveryService>();
+        services.AddScoped<IAiTaskRunEventService, AiTaskRunEventService>();
         services.AddScoped<IAiTaskChatService, XiHanAiTaskChatService>();
         services.AddScoped<IAiTaskBackingTaskSyncService, AiTaskBackingTaskSyncService>();
         return services;

@@ -36,8 +36,8 @@ public sealed class AiTaskRunGuidanceTests
             RunStatus = AiTaskRunStatus.Running
         });
         var guidanceRepository = new InMemoryAiTaskRunGuidanceRepository();
-        var eventRepository = new InMemoryAiTaskRunEventRepository();
-        var appService = CreateAppService(runRepository, guidanceRepository, eventRepository);
+        var eventService = new FakeAiTaskRunEventService();
+        var appService = CreateAppService(runRepository, guidanceRepository, eventService);
 
         var result = await appService.AppendRunGuidanceAsync(new AiTaskAppendGuidanceDto
         {
@@ -49,7 +49,7 @@ public sealed class AiTaskRunGuidanceTests
         Assert.Equal(42, result.RunId);
         Assert.Equal(AiTaskRunGuidanceStatus.Pending, result.Status);
         Assert.Equal("Focus on overdue items.", result.Content);
-        Assert.Contains(eventRepository.Events, e => e.RunId == 42 && e.EventType == AiTaskRunEventType.GuidanceReceived);
+        Assert.Contains(eventService.Events, e => e.RunId == 42 && e.EventType == AiTaskRunEventType.GuidanceReceived);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class AiTaskRunGuidanceTests
         var runRepository = new InMemoryAiTaskRunRepository();
         runRepository.Runs.Add(new SysAiTaskRun(42) { AiTaskId = 7, AiTaskCode = "daily", RunStatus = AiTaskRunStatus.Queued });
         var guidanceRepository = new InMemoryAiTaskRunGuidanceRepository();
-        var appService = CreateAppService(runRepository, guidanceRepository, new InMemoryAiTaskRunEventRepository());
+        var appService = CreateAppService(runRepository, guidanceRepository, new FakeAiTaskRunEventService());
 
         var first = await appService.AppendRunGuidanceAsync(new AiTaskAppendGuidanceDto { RunId = 42, Content = "A", ClientRequestId = "same" });
         var second = await appService.AppendRunGuidanceAsync(new AiTaskAppendGuidanceDto { RunId = 42, Content = "A", ClientRequestId = "same" });
@@ -72,7 +72,7 @@ public sealed class AiTaskRunGuidanceTests
     {
         var runRepository = new InMemoryAiTaskRunRepository();
         runRepository.Runs.Add(new SysAiTaskRun(42) { AiTaskId = 7, AiTaskCode = "daily", RunStatus = AiTaskRunStatus.Success });
-        var appService = CreateAppService(runRepository, new InMemoryAiTaskRunGuidanceRepository(), new InMemoryAiTaskRunEventRepository());
+        var appService = CreateAppService(runRepository, new InMemoryAiTaskRunGuidanceRepository(), new FakeAiTaskRunEventService());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             appService.AppendRunGuidanceAsync(new AiTaskAppendGuidanceDto { RunId = 42, Content = "Too late." }));
@@ -83,7 +83,7 @@ public sealed class AiTaskRunGuidanceTests
     private static AiTaskAppService CreateAppService(
         InMemoryAiTaskRunRepository runRepository,
         InMemoryAiTaskRunGuidanceRepository guidanceRepository,
-        InMemoryAiTaskRunEventRepository eventRepository)
+        FakeAiTaskRunEventService eventService)
     {
         var taskRepository = new InMemoryAiTaskRepository(new SysAiTask(7)
         {
@@ -114,6 +114,6 @@ public sealed class AiTaskRunGuidanceTests
             new FakeAiTaskRunQueue(),
             runRepository,
             guidanceRepository,
-            eventRepository);
+            eventService);
     }
 }
