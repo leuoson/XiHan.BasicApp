@@ -79,6 +79,27 @@ public sealed class AiTaskSchemaSeeder : DataSeederBase
             ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "last_heartbeat_time" timestamptz NULL;
             ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "attempt_count" int4 NOT NULL DEFAULT 0;
 
+            CREATE TABLE IF NOT EXISTS "sys_ai_task_run_event" (
+                "basic_id" int8 NOT NULL,
+                "tenant_id" int8 NOT NULL DEFAULT 0,
+                "created_time" timestamptz NOT NULL DEFAULT now(),
+                "created_by" int8 NULL,
+                "modified_time" timestamptz NULL,
+                "modified_by" int8 NULL,
+                "is_deleted" bool NOT NULL DEFAULT false,
+                "deleted_time" timestamptz NULL,
+                "deleted_by" int8 NULL,
+                "run_id" int8 NOT NULL,
+                "sequence" int8 NOT NULL,
+                "event_type" int4 NOT NULL,
+                "role" int4 NOT NULL DEFAULT 0,
+                "content" text NULL,
+                "payload_json" text NULL,
+                CONSTRAINT "pk_sys_ai_task_run_event" PRIMARY KEY ("basic_id")
+            );
+            CREATE INDEX IF NOT EXISTS "ix_sys_ai_task_run_event_tenant_run_seq"
+                ON "sys_ai_task_run_event" ("tenant_id", "run_id", "sequence");
+
             ALTER TABLE IF EXISTS "sys_ai_task_tool_policy" ADD COLUMN IF NOT EXISTS "ai_task_id" int8 NOT NULL DEFAULT 0;
             ALTER TABLE IF EXISTS "sys_ai_task_tool_policy" ADD COLUMN IF NOT EXISTS "tool_id" int8 NOT NULL DEFAULT 0;
             ALTER TABLE IF EXISTS "sys_ai_task_tool_policy" ADD COLUMN IF NOT EXISTS "remark" varchar(500) NULL;

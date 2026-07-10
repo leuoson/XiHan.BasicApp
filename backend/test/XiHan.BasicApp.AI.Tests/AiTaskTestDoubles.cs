@@ -395,6 +395,51 @@ internal sealed class FakeAiTaskChatService : IAiTaskChatService
     }
 }
 
+internal sealed class InMemoryAiTaskRunEventRepository : IAiTaskRunEventRepository
+{
+    public List<SysAiTaskRunEvent> Events { get; } = [];
+
+    public Task<SysAiTaskRunEvent> AddAsync(SysAiTaskRunEvent entity, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sequence = Events
+            .Where(e => e.RunId == entity.RunId)
+            .Select(e => e.Sequence)
+            .DefaultIfEmpty()
+            .Max() + 1;
+        if (entity.BasicId <= 0)
+        {
+            entity = new SysAiTaskRunEvent(Events.Count + 1)
+            {
+                RunId = entity.RunId,
+                Sequence = sequence,
+                EventType = entity.EventType,
+                Role = entity.Role,
+                Content = entity.Content,
+                PayloadJson = entity.PayloadJson,
+                CreatedTime = entity.CreatedTime == default ? DateTimeOffset.Now : entity.CreatedTime
+            };
+        }
+        else
+        {
+            entity.Sequence = sequence;
+        }
+
+        Events.Add(entity);
+        return Task.FromResult(entity);
+    }
+
+    public Task<IReadOnlyList<SysAiTaskRunEvent>> GetByRunIdAsync(long runId, long afterSequence = 0, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<SysAiTaskRunEvent>>(Events
+            .Where(e => e.RunId == runId && e.Sequence > afterSequence)
+            .OrderBy(e => e.Sequence)
+            .ToList());
+    }
+}
+
 internal sealed class InMemoryAiToolRepository : IAiToolRepository
 {
     public SysAiTool Tool { get; }

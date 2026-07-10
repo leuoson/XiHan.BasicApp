@@ -149,6 +149,17 @@ public class AiTaskRunListItemDto : BasicAppDto
     public DateTimeOffset CreatedTime { get; set; }
 }
 
+public sealed class AiTaskRunEventDto : BasicAppDto
+{
+    public long RunId { get; set; }
+    public long Sequence { get; set; }
+    public AiTaskRunEventType EventType { get; set; }
+    public AiTaskRunEventRole Role { get; set; }
+    public string? Content { get; set; }
+    public string? PayloadJson { get; set; }
+    public DateTimeOffset CreatedTime { get; set; }
+}
+
 public sealed class AiTaskRunDetailDto : AiTaskRunListItemDto
 {
     public string? LeaseOwner { get; set; }

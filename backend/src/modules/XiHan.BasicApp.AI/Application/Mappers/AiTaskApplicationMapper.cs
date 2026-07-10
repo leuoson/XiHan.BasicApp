@@ -348,6 +348,26 @@ public static class AiTaskApplicationMapper
     }
 
     /// <summary>
+    /// 运行事件实体映射为 DTO
+    /// </summary>
+    public static AiTaskRunEventDto ToRunEventDto(SysAiTaskRunEvent entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        return new AiTaskRunEventDto
+        {
+            BasicId = entity.BasicId,
+            RunId = entity.RunId,
+            Sequence = entity.Sequence,
+            EventType = entity.EventType,
+            Role = entity.Role,
+            Content = entity.Content,
+            PayloadJson = entity.PayloadJson,
+            CreatedTime = entity.CreatedTime
+        };
+    }
+
+    /// <summary>
     /// 获取内部 SysTask 编码
     /// </summary>
     public static string ToBackingTaskCode(string aiTaskCode)

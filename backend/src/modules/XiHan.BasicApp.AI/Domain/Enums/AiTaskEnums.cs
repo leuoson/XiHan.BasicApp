@@ -135,3 +135,123 @@ public enum AiTaskRunStatus
     [Description("排队中")]
     Queued = 4
 }
+
+/// <summary>
+/// AI 任务运行事件类型
+/// </summary>
+public enum AiTaskRunEventType
+{
+    /// <summary>
+    /// 已排队
+    /// </summary>
+    [Description("已排队")]
+    RunQueued = 0,
+
+    /// <summary>
+    /// 开始执行
+    /// </summary>
+    [Description("开始执行")]
+    RunStarted = 1,
+
+    /// <summary>
+    /// 提示词已渲染
+    /// </summary>
+    [Description("提示词已渲染")]
+    PromptRendered = 2,
+
+    /// <summary>
+    /// Agent 步骤开始
+    /// </summary>
+    [Description("Agent 步骤开始")]
+    AgentStepStarted = 3,
+
+    /// <summary>
+    /// Agent 消息片段
+    /// </summary>
+    [Description("Agent 消息片段")]
+    AgentMessageDelta = 4,
+
+    /// <summary>
+    /// 工具调用开始
+    /// </summary>
+    [Description("工具调用开始")]
+    ToolCallStarted = 5,
+
+    /// <summary>
+    /// 工具调用完成
+    /// </summary>
+    [Description("工具调用完成")]
+    ToolCallFinished = 6,
+
+    /// <summary>
+    /// 收到运行引导
+    /// </summary>
+    [Description("收到运行引导")]
+    GuidanceReceived = 7,
+
+    /// <summary>
+    /// 运行引导已应用
+    /// </summary>
+    [Description("运行引导已应用")]
+    GuidanceApplied = 8,
+
+    /// <summary>
+    /// 运行引导已忽略
+    /// </summary>
+    [Description("运行引导已忽略")]
+    GuidanceIgnored = 9,
+
+    /// <summary>
+    /// 执行成功
+    /// </summary>
+    [Description("执行成功")]
+    RunSucceeded = 10,
+
+    /// <summary>
+    /// 执行失败
+    /// </summary>
+    [Description("执行失败")]
+    RunFailed = 11,
+
+    /// <summary>
+    /// 执行取消
+    /// </summary>
+    [Description("执行取消")]
+    RunCanceled = 12,
+
+    /// <summary>
+    /// 已重新排队
+    /// </summary>
+    [Description("已重新排队")]
+    RunRequeued = 13
+}
+
+/// <summary>
+/// AI 任务运行事件角色
+/// </summary>
+public enum AiTaskRunEventRole
+{
+    /// <summary>
+    /// 系统
+    /// </summary>
+    [Description("系统")]
+    System = 0,
+
+    /// <summary>
+    /// 用户
+    /// </summary>
+    [Description("用户")]
+    User = 1,
+
+    /// <summary>
+    /// AI
+    /// </summary>
+    [Description("AI")]
+    Assistant = 2,
+
+    /// <summary>
+    /// 工具
+    /// </summary>
+    [Description("工具")]
+    Tool = 3
+}
