@@ -143,6 +143,7 @@ public class AiTaskRunListItemDto : BasicAppDto
     public DateTimeOffset StartedTime { get; set; }
     public DateTimeOffset? EndedTime { get; set; }
     public AiTaskRunStatus RunStatus { get; set; }
+    public int AttemptCount { get; set; }
     public long? DurationMilliseconds { get; set; }
     public string? ErrorMessage { get; set; }
     public DateTimeOffset CreatedTime { get; set; }
@@ -150,6 +151,9 @@ public class AiTaskRunListItemDto : BasicAppDto
 
 public sealed class AiTaskRunDetailDto : AiTaskRunListItemDto
 {
+    public string? LeaseOwner { get; set; }
+    public DateTimeOffset? LeaseExpiresAt { get; set; }
+    public DateTimeOffset? LastHeartbeatTime { get; set; }
     public string? PromptSnapshot { get; set; }
     public string? ResultText { get; set; }
 }

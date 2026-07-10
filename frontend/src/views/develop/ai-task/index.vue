@@ -14,6 +14,7 @@ import type {
 import type { DataTableColumns, SelectOption } from 'naive-ui'
 import type { ListFieldSchema, PageSchema, SchemaActionPayload } from '~/components'
 import type { PageResult } from '~/types/contracts'
+import { Icon } from '@iconify/vue'
 import {
   NButton,
   NDataTable,
@@ -22,6 +23,7 @@ import {
   NDrawerContent,
   NForm,
   NFormItem,
+  NIcon,
   NInput,
   NInputNumber,
   NModal,
@@ -29,6 +31,7 @@ import {
   NSpace,
   NSwitch,
   NTag,
+  NTooltip,
   useDialog,
   useMessage,
 } from 'naive-ui'
@@ -116,6 +119,7 @@ const runHistoryTitle = computed(() => runHistoryTask.value
 function reload() {
   void schemaPageRef.value?.reload()
 }
+
 const providerSelectOptions = computed<SelectOption[]>(() => {
   const options = providers.value.map(provider => ({
     label: [
@@ -892,7 +896,20 @@ onMounted(() => {
             <NFormItem v-if="form.triggerType !== AiTaskTriggerType.Schedule" :label="t('develop.ai_task.form_start_time')">
               <NDatePicker v-model:value="form.startTime" clearable type="datetime" class="full-input" />
             </NFormItem>
-            <NFormItem :label="t('develop.ai_task.form_end_time')">
+            <NFormItem>
+              <template #label>
+                <span class="ai-task-form-label-help">
+                  <span>{{ t('develop.ai_task.form_end_time') }}</span>
+                  <NTooltip>
+                    <template #trigger>
+                      <NIcon :size="14" class="ai-task-form-help-icon">
+                        <Icon icon="lucide:circle-help" />
+                      </NIcon>
+                    </template>
+                    {{ t('develop.ai_task.form_end_time_help') }}
+                  </NTooltip>
+                </span>
+              </template>
               <NDatePicker v-model:value="form.endTime" clearable type="datetime" class="full-input" />
             </NFormItem>
             <NFormItem v-if="form.triggerType !== AiTaskTriggerType.Schedule" :label="t('develop.ai_task.form_repeat_count')">
@@ -906,7 +923,20 @@ onMounted(() => {
             {{ t('develop.ai_task.section_advanced') }}
           </div>
           <div class="ai-task-form-grid ai-task-form-grid--compact">
-            <NFormItem :label="t('develop.ai_task.form_timeout')">
+            <NFormItem>
+              <template #label>
+                <span class="ai-task-form-label-help">
+                  <span>{{ t('develop.ai_task.form_timeout') }}</span>
+                  <NTooltip>
+                    <template #trigger>
+                      <NIcon :size="14" class="ai-task-form-help-icon">
+                        <Icon icon="lucide:circle-help" />
+                      </NIcon>
+                    </template>
+                    {{ t('develop.ai_task.form_timeout_help') }}
+                  </NTooltip>
+                </span>
+              </template>
               <NInputNumber v-model:value="form.timeoutSeconds" :min="1" class="full-input" />
             </NFormItem>
             <NFormItem :label="t('develop.ai_task.form_retry')">
@@ -1128,6 +1158,22 @@ onMounted(() => {
 
 .full-input {
   width: 100%;
+}
+
+.ai-task-form-label-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ai-task-form-help-icon {
+  color: var(--n-text-color-3);
+  cursor: help;
+}
+
+.ai-task-form-help-icon:hover {
+  color: var(--n-text-color-2);
 }
 
 .policy-tool {

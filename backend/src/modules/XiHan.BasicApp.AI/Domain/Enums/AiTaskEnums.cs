@@ -127,5 +127,11 @@ public enum AiTaskRunStatus
     /// 已取消
     /// </summary>
     [Description("已取消")]
-    Canceled = 3
+    Canceled = 3,
+
+    /// <summary>
+    /// 排队中
+    /// </summary>
+    [Description("排队中")]
+    Queued = 4
 }

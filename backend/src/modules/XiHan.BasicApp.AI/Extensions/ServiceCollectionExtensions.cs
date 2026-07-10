@@ -25,6 +25,7 @@ using XiHan.BasicApp.AI.Infrastructure.Repositories;
 using XiHan.BasicApp.AI.Infrastructure.Security;
 using XiHan.BasicApp.AI.Infrastructure.Seeders.System;
 using XiHan.BasicApp.AI.Infrastructure.Skills;
+using XiHan.BasicApp.AI.Infrastructure.Tasks;
 using XiHan.Framework.AI.Abstractions.Configuration;
 using XiHan.Framework.AI.Abstractions.Prompts;
 using XiHan.Framework.AI.Abstractions.Skills;
@@ -230,6 +231,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAiTaskToolPolicyRepository, AiTaskToolPolicyRepository>();
         services.AddScoped<AiTaskPromptRenderer>();
         services.AddScoped<AiTaskExecutor>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IAiTaskRunQueue, AiTaskRedisRunQueue>();
+        services.AddScoped<AiTaskRunRecoveryService>();
         services.AddScoped<IAiTaskChatService, XiHanAiTaskChatService>();
         services.AddScoped<IAiTaskBackingTaskSyncService, AiTaskBackingTaskSyncService>();
         return services;

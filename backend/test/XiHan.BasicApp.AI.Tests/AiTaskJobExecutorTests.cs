@@ -43,6 +43,9 @@ public sealed class AiTaskJobExecutorTests
         Assert.True(result.Succeeded);
         Assert.Single(runRepository.Runs);
         Assert.Equal(AiTaskRunStatus.Success, runRepository.Runs[0].RunStatus);
+        Assert.Equal(1, runRepository.Runs[0].AttemptCount);
+        Assert.Null(runRepository.Runs[0].LeaseOwner);
+        Assert.Null(runRepository.Runs[0].LeaseExpiresAt);
         Assert.Equal("Brief result", runRepository.Runs[0].ResultText);
         Assert.Equal("Write a short brief.", runRepository.Runs[0].PromptSnapshot);
     }
@@ -98,5 +101,76 @@ public sealed class AiTaskJobExecutorTests
         Assert.Equal(AiTaskRunStatus.Failed, runRepository.Runs[0].RunStatus);
         Assert.Equal("AI 任务引用的提示词不存在或已禁用。", runRepository.Runs[0].ErrorMessage);
         Assert.Null(chat.LastPrompt);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_completes_existing_running_run()
+    {
+        var task = new SysAiTask(7)
+        {
+            AiTaskCode = "morning-news",
+            AiTaskName = "Morning News",
+            PromptMode = AiTaskPromptMode.Inline,
+            PromptText = "Write a short brief.",
+            Status = EnableStatus.Enabled
+        };
+        var repository = new InMemoryAiTaskRepository(task);
+        var runRepository = new InMemoryAiTaskRunRepository();
+        runRepository.Runs.Add(new SysAiTaskRun(42)
+        {
+            AiTaskId = 7,
+            AiTaskCode = "morning-news",
+            RunStatus = AiTaskRunStatus.Queued
+        });
+        var chat = new FakeAiTaskChatService("Brief result");
+        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer(new FakeAiPromptStore()));
+
+        var result = await executor.ExecuteRunAsync(42);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(42, result.RunId);
+        Assert.Equal(AiTaskRunStatus.Success, result.RunStatus);
+        Assert.Equal(AiTaskRunStatus.Success, runRepository.Runs[0].RunStatus);
+        Assert.Equal(1, runRepository.Runs[0].AttemptCount);
+        Assert.Null(runRepository.Runs[0].LeaseOwner);
+        Assert.Null(runRepository.Runs[0].LeaseExpiresAt);
+        Assert.Equal("Brief result", runRepository.Runs[0].ResultText);
+        Assert.Equal("Write a short brief.", chat.LastPrompt);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_ignores_result_when_lease_was_requeued()
+    {
+        var task = new SysAiTask(7)
+        {
+            AiTaskCode = "morning-news",
+            AiTaskName = "Morning News",
+            PromptMode = AiTaskPromptMode.Inline,
+            PromptText = "Write a short brief.",
+            Status = EnableStatus.Enabled
+        };
+        var repository = new InMemoryAiTaskRepository(task);
+        var runRepository = new InMemoryAiTaskRunRepository();
+        runRepository.Runs.Add(new SysAiTaskRun(42)
+        {
+            AiTaskId = 7,
+            AiTaskCode = "morning-news",
+            RunStatus = AiTaskRunStatus.Queued
+        });
+        var chat = new FakeAiTaskChatService("Late result", onComplete: () =>
+        {
+            runRepository.Runs[0].RunStatus = AiTaskRunStatus.Queued;
+            runRepository.Runs[0].LeaseOwner = null;
+            runRepository.Runs[0].LeaseExpiresAt = null;
+            runRepository.Runs[0].ErrorMessage = "执行器中断或租约过期，已重新排队。";
+        });
+        var executor = new AiTaskExecutor(repository, runRepository, chat, new AiTaskPromptRenderer(new FakeAiPromptStore()));
+
+        var result = await executor.ExecuteRunAsync(42);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(AiTaskRunStatus.Queued, runRepository.Runs[0].RunStatus);
+        Assert.Null(runRepository.Runs[0].ResultText);
+        Assert.Contains("租约", result.ErrorMessage);
     }
 }

@@ -92,6 +92,8 @@ export interface AiTaskDetailDto extends AiTaskListItemDto {
 }
 
 export interface AiTaskExecutionResultDto {
+  runId?: ApiId | null
+  runStatus?: AiTaskRunStatus | null
   succeeded: boolean
   resultText?: string | null
   errorMessage?: string | null
@@ -103,12 +105,16 @@ export interface AiTaskRunListItemDto extends BasicDto {
   startedTime: DateTimeString
   endedTime?: DateTimeString | null
   runStatus: AiTaskRunStatus
+  attemptCount: number
   durationMilliseconds?: number | null
   errorMessage?: string | null
   createdTime: DateTimeString
 }
 
 export interface AiTaskRunDetailDto extends AiTaskRunListItemDto {
+  leaseOwner?: string | null
+  leaseExpiresAt?: DateTimeString | null
+  lastHeartbeatTime?: DateTimeString | null
   promptSnapshot?: string | null
   resultText?: string | null
 }

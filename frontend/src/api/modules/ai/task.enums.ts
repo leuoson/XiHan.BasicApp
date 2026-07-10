@@ -17,6 +17,7 @@ export enum AiTaskRunStatus {
   Success = 'Success',
   Failed = 'Failed',
   Canceled = 'Canceled',
+  Queued = 'Queued',
 }
 
 export const AI_TASK_PROMPT_MODE_OPTIONS = [
@@ -35,6 +36,7 @@ export const AI_TASK_SCHEDULE_TRIGGER_TYPE_OPTIONS = AI_TASK_TRIGGER_TYPE_OPTION
   .filter(option => option.value !== AiTaskTriggerType.Immediate)
 
 export const AI_TASK_RUN_STATUS_OPTIONS = [
+  { label: '排队中', value: AiTaskRunStatus.Queued },
   { label: '执行中', value: AiTaskRunStatus.Running },
   { label: '成功', value: AiTaskRunStatus.Success },
   { label: '失败', value: AiTaskRunStatus.Failed },

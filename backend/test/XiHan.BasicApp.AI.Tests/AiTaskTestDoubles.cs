@@ -14,6 +14,7 @@
 
 using XiHan.BasicApp.AI.Application.Services;
 using XiHan.BasicApp.AI.Domain.Entities;
+using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.BasicApp.AI.Domain.Repositories;
 using XiHan.BasicApp.Core.Dtos;
 using XiHan.BasicApp.Saas.Domain.Enums;
@@ -103,6 +104,26 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (entity.BasicId <= 0)
+        {
+            entity = new SysAiTaskRun(Runs.Count + 1)
+            {
+                AiTaskId = entity.AiTaskId,
+                AiTaskCode = entity.AiTaskCode,
+                StartedTime = entity.StartedTime,
+                EndedTime = entity.EndedTime,
+                RunStatus = entity.RunStatus,
+                LeaseOwner = entity.LeaseOwner,
+                LeaseExpiresAt = entity.LeaseExpiresAt,
+                LastHeartbeatTime = entity.LastHeartbeatTime,
+                AttemptCount = entity.AttemptCount,
+                PromptSnapshot = entity.PromptSnapshot,
+                ResultText = entity.ResultText,
+                ErrorMessage = entity.ErrorMessage,
+                DurationMilliseconds = entity.DurationMilliseconds
+            };
+        }
+
         Runs.Add(entity);
         return Task.FromResult(entity);
     }
@@ -110,6 +131,12 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
     public Task<SysAiTaskRun> UpdateAsync(SysAiTaskRun entity, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var index = Runs.FindIndex(run => run.BasicId == entity.BasicId);
+        if (index >= 0)
+        {
+            Runs[index] = entity;
+        }
+
         return Task.FromResult(entity);
     }
 
@@ -117,6 +144,116 @@ internal sealed class InMemoryAiTaskRunRepository : IAiTaskRunRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Runs.FirstOrDefault(run => run.BasicId == id));
+    }
+
+    public Task<SysAiTaskRun?> ClaimQueuedAsync(long id, string leaseOwner, DateTimeOffset leaseExpiresAt, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var run = Runs.FirstOrDefault(run => run.BasicId == id && run.RunStatus == AiTaskRunStatus.Queued);
+        if (run is null)
+        {
+            return Task.FromResult<SysAiTaskRun?>(null);
+        }
+
+        run.RunStatus = AiTaskRunStatus.Running;
+        run.LeaseOwner = leaseOwner.Trim();
+        run.LeaseExpiresAt = leaseExpiresAt;
+        run.LastHeartbeatTime = now;
+        run.StartedTime = now;
+        run.AttemptCount += 1;
+        return Task.FromResult<SysAiTaskRun?>(run);
+    }
+
+    public Task<SysAiTaskRun?> CompleteRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string? resultText, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var run = Runs.FirstOrDefault(run => run.BasicId == id
+            && run.RunStatus == AiTaskRunStatus.Running
+            && run.LeaseOwner == leaseOwner.Trim());
+        if (run is null)
+        {
+            return Task.FromResult<SysAiTaskRun?>(null);
+        }
+
+        run.RunStatus = AiTaskRunStatus.Success;
+        run.EndedTime = endedTime;
+        run.DurationMilliseconds = durationMilliseconds;
+        run.LeaseOwner = null;
+        run.LeaseExpiresAt = null;
+        run.LastHeartbeatTime = null;
+        run.PromptSnapshot = promptSnapshot;
+        run.ResultText = resultText;
+        run.ErrorMessage = null;
+        return Task.FromResult<SysAiTaskRun?>(run);
+    }
+
+    public Task<SysAiTaskRun?> FailRunningAsync(long id, string leaseOwner, DateTimeOffset endedTime, long durationMilliseconds, string? promptSnapshot, string errorMessage, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var run = Runs.FirstOrDefault(run => run.BasicId == id
+            && run.RunStatus == AiTaskRunStatus.Running
+            && run.LeaseOwner == leaseOwner.Trim());
+        if (run is null)
+        {
+            return Task.FromResult<SysAiTaskRun?>(null);
+        }
+
+        run.RunStatus = AiTaskRunStatus.Failed;
+        run.EndedTime = endedTime;
+        run.DurationMilliseconds = durationMilliseconds;
+        run.LeaseOwner = null;
+        run.LeaseExpiresAt = null;
+        run.LastHeartbeatTime = null;
+        run.PromptSnapshot = promptSnapshot;
+        run.ErrorMessage = errorMessage;
+        return Task.FromResult<SysAiTaskRun?>(run);
+    }
+
+    public Task<IReadOnlyList<long>> GetStaleQueuedIdsAsync(DateTimeOffset queuedBefore, int maxCount, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<long>>(Runs
+            .Where(run => run.RunStatus == AiTaskRunStatus.Queued && run.StartedTime <= queuedBefore)
+            .OrderBy(run => run.StartedTime)
+            .Take(maxCount)
+            .Select(run => run.BasicId)
+            .ToList());
+    }
+
+    public Task<IReadOnlyList<SysAiTaskRun>> GetRunningRecoveryCandidatesAsync(int maxCount, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<SysAiTaskRun>>(Runs
+            .Where(run => run.RunStatus == AiTaskRunStatus.Running)
+            .OrderBy(run => run.StartedTime)
+            .Take(maxCount)
+            .ToList());
+    }
+
+    public Task RequeueAsync(long id, DateTimeOffset now, string message, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var run = Runs.First(run => run.BasicId == id);
+        run.RunStatus = AiTaskRunStatus.Queued;
+        run.LeaseOwner = null;
+        run.LeaseExpiresAt = null;
+        run.LastHeartbeatTime = null;
+        run.ErrorMessage = message;
+        return Task.CompletedTask;
+    }
+
+    public Task FailAsync(long id, DateTimeOffset now, long durationMilliseconds, string errorMessage, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var run = Runs.First(run => run.BasicId == id);
+        run.RunStatus = AiTaskRunStatus.Failed;
+        run.EndedTime = now;
+        run.DurationMilliseconds = durationMilliseconds;
+        run.LeaseOwner = null;
+        run.LeaseExpiresAt = null;
+        run.LastHeartbeatTime = null;
+        run.ErrorMessage = errorMessage;
+        return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<SysAiTaskRun>> GetByTaskIdAsync(long aiTaskId, CancellationToken cancellationToken = default)
@@ -186,23 +323,74 @@ internal sealed class InMemoryAiTaskToolPolicyRepository : IAiTaskToolPolicyRepo
     }
 }
 
+internal sealed class FakeAiTaskRunQueue : IAiTaskRunQueue
+{
+    public List<long> RunIds { get; } = [];
+
+    public Task EnqueueAsync(long runId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        RunIds.Add(runId);
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeTimeProvider : TimeProvider
+{
+    private readonly DateTimeOffset _now;
+
+    public FakeTimeProvider(DateTimeOffset now)
+    {
+        _now = now;
+    }
+
+    public override DateTimeOffset GetUtcNow()
+    {
+        return _now.ToUniversalTime();
+    }
+}
+
+internal sealed class FakeAiTaskBackingTaskSyncService : IAiTaskBackingTaskSyncService
+{
+    public Task<SysAiTask> SyncAsync(SysAiTask task, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(task);
+    }
+
+    public Task SyncStatusAsync(SysAiTask task, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(SysAiTask task, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+}
+
 internal sealed class FakeAiTaskChatService : IAiTaskChatService
 {
     private readonly string? _resultText;
     private readonly Exception? _exception;
+    private readonly Action? _onComplete;
 
     public string? LastPrompt { get; private set; }
 
-    public FakeAiTaskChatService(string? resultText, Exception? exception = null)
+    public FakeAiTaskChatService(string? resultText, Exception? exception = null, Action? onComplete = null)
     {
         _resultText = resultText;
         _exception = exception;
+        _onComplete = onComplete;
     }
 
     public Task<string?> CompleteAsync(SysAiTask task, string prompt, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         LastPrompt = prompt;
+        _onComplete?.Invoke();
         return _exception is null ? Task.FromResult(_resultText) : Task.FromException<string?>(_exception);
     }
 }

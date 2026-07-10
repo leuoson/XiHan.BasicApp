@@ -40,6 +40,7 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
     private readonly IAiToolRepository _toolRepository;
     private readonly IAiTaskBackingTaskSyncService _backingTaskSyncService;
     private readonly AiTaskExecutor _executor;
+    private readonly IAiTaskRunQueue _runQueue;
 
     /// <summary>
     /// 构造函数
@@ -50,7 +51,8 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         IAiTaskToolPolicyRepository policyRepository,
         IAiToolRepository toolRepository,
         IAiTaskBackingTaskSyncService backingTaskSyncService,
-        AiTaskExecutor executor)
+        AiTaskExecutor executor,
+        IAiTaskRunQueue runQueue)
     {
         _taskDomainService = taskDomainService;
         _taskRepository = taskRepository;
@@ -58,6 +60,7 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         _toolRepository = toolRepository;
         _backingTaskSyncService = backingTaskSyncService;
         _executor = executor;
+        _runQueue = runQueue;
     }
 
     /// <inheritdoc />
@@ -115,14 +118,16 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
     }
 
     /// <inheritdoc />
+    [UnitOfWork(true)]
     [PermissionAuthorize(AiTaskPermissionCodes.Execute)]
     public async Task<AiTaskExecutionResultDto> RunAsync(AiTaskRunDto input, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var result = await _executor.ExecuteAsync(input.BasicId, cancellationToken);
-        return AiTaskApplicationMapper.ToExecutionResultDto(result);
+        var run = await _executor.StartRunAsync(input.BasicId, cancellationToken);
+        await _runQueue.EnqueueAsync(run.BasicId, cancellationToken);
+        return AiTaskApplicationMapper.ToExecutionResultDto(AiTaskExecutionResult.Accepted(run.BasicId));
     }
 
     private async Task<AiTaskDetailDto> SaveAndMapDetailAsync(SysAiTask task, IReadOnlyList<AiTaskToolPolicyCommand> commands, CancellationToken cancellationToken)

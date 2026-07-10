@@ -70,7 +70,31 @@ public partial class SysAiTaskRun : BasicAppFullAuditedEntity
     /// 运行状态
     /// </summary>
     [SugarColumn(ColumnName = "Run_Status", ColumnDescription = "运行状态")]
-    public virtual AiTaskRunStatus RunStatus { get; set; } = AiTaskRunStatus.Running;
+    public virtual AiTaskRunStatus RunStatus { get; set; } = AiTaskRunStatus.Queued;
+
+    /// <summary>
+    /// 执行租约持有者
+    /// </summary>
+    [SugarColumn(ColumnName = "Lease_Owner", ColumnDescription = "执行租约持有者", Length = 200, IsNullable = true)]
+    public virtual string? LeaseOwner { get; set; }
+
+    /// <summary>
+    /// 执行租约过期时间
+    /// </summary>
+    [SugarColumn(ColumnName = "Lease_Expires_At", ColumnDescription = "执行租约过期时间", IsNullable = true)]
+    public virtual DateTimeOffset? LeaseExpiresAt { get; set; }
+
+    /// <summary>
+    /// 最后心跳时间
+    /// </summary>
+    [SugarColumn(ColumnName = "Last_Heartbeat_Time", ColumnDescription = "最后心跳时间", IsNullable = true)]
+    public virtual DateTimeOffset? LastHeartbeatTime { get; set; }
+
+    /// <summary>
+    /// 执行尝试次数
+    /// </summary>
+    [SugarColumn(ColumnName = "Attempt_Count", ColumnDescription = "执行尝试次数")]
+    public virtual int AttemptCount { get; set; }
 
     /// <summary>
     /// 提示词快照

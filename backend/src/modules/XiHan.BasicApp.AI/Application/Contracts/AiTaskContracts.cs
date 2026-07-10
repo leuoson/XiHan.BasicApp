@@ -13,6 +13,7 @@
 #endregion <<版权版本注释>>
 
 using XiHan.BasicApp.AI.Application.Dtos;
+using XiHan.BasicApp.AI.Domain.Enums;
 using XiHan.Framework.Application.Contracts.Services;
 
 namespace XiHan.BasicApp.AI.Application.Contracts;
@@ -79,6 +80,16 @@ public interface IAiTaskQueryService : IApplicationService
 /// </summary>
 public sealed class AiTaskExecutionResultDto
 {
+    /// <summary>
+    /// 运行记录主键
+    /// </summary>
+    public long? RunId { get; set; }
+
+    /// <summary>
+    /// 当前运行状态
+    /// </summary>
+    public AiTaskRunStatus? RunStatus { get; set; }
+
     /// <summary>
     /// 是否成功
     /// </summary>

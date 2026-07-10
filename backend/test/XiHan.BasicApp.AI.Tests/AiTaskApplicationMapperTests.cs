@@ -83,4 +83,28 @@ public sealed class AiTaskApplicationMapperTests
         Assert.Equal(nameof(AiTaskJobExecutor.ExecuteAsync), dto.TaskMethod);
         Assert.Contains("\"aiTaskId\":321", dto.TaskParams);
     }
+
+    [Fact]
+    public void ToRunDetailDto_maps_recovery_diagnostics()
+    {
+        var now = DateTimeOffset.Parse("2026-07-09T16:00:00+08:00");
+        var run = new SysAiTaskRun(42)
+        {
+            AiTaskId = 321,
+            AiTaskCode = "morning-news",
+            StartedTime = now.AddMinutes(-1),
+            RunStatus = AiTaskRunStatus.Running,
+            LeaseOwner = "worker-1",
+            LeaseExpiresAt = now.AddMinutes(4),
+            LastHeartbeatTime = now,
+            AttemptCount = 2
+        };
+
+        var dto = AiTaskApplicationMapper.ToRunDetailDto(run);
+
+        Assert.Equal(2, dto.AttemptCount);
+        Assert.Equal("worker-1", dto.LeaseOwner);
+        Assert.Equal(now.AddMinutes(4), dto.LeaseExpiresAt);
+        Assert.Equal(now, dto.LastHeartbeatTime);
+    }
 }

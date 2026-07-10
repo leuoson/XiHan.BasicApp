@@ -289,6 +289,8 @@ public static class AiTaskApplicationMapper
         ArgumentNullException.ThrowIfNull(result);
         return new AiTaskExecutionResultDto
         {
+            RunId = result.RunId,
+            RunStatus = result.RunStatus,
             Succeeded = result.Succeeded,
             ResultText = result.ResultText,
             ErrorMessage = result.ErrorMessage
@@ -310,6 +312,7 @@ public static class AiTaskApplicationMapper
             StartedTime = entity.StartedTime,
             EndedTime = entity.EndedTime,
             RunStatus = entity.RunStatus,
+            AttemptCount = entity.AttemptCount,
             DurationMilliseconds = entity.DurationMilliseconds,
             ErrorMessage = entity.ErrorMessage,
             CreatedTime = entity.CreatedTime
@@ -332,9 +335,13 @@ public static class AiTaskApplicationMapper
             StartedTime = item.StartedTime,
             EndedTime = item.EndedTime,
             RunStatus = item.RunStatus,
+            AttemptCount = item.AttemptCount,
             DurationMilliseconds = item.DurationMilliseconds,
             ErrorMessage = item.ErrorMessage,
             CreatedTime = item.CreatedTime,
+            LeaseOwner = entity.LeaseOwner,
+            LeaseExpiresAt = entity.LeaseExpiresAt,
+            LastHeartbeatTime = entity.LastHeartbeatTime,
             PromptSnapshot = entity.PromptSnapshot,
             ResultText = entity.ResultText
         };
