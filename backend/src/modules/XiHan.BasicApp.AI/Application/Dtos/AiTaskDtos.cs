@@ -183,6 +183,9 @@ public sealed class AiTaskRunDetailDto : AiTaskRunListItemDto
     public string? LeaseOwner { get; set; }
     public DateTimeOffset? LeaseExpiresAt { get; set; }
     public DateTimeOffset? LastHeartbeatTime { get; set; }
+    public string? RunnerKind { get; set; }
+    public string? RunnerVersion { get; set; }
+    public string? AgentSessionId { get; set; }
     public string? PromptSnapshot { get; set; }
     public string? ResultText { get; set; }
     public List<AiTaskRunEventDto> Events { get; set; } = [];

@@ -78,6 +78,9 @@ public sealed class AiTaskSchemaSeeder : DataSeederBase
             ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "lease_expires_at" timestamptz NULL;
             ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "last_heartbeat_time" timestamptz NULL;
             ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "attempt_count" int4 NOT NULL DEFAULT 0;
+            ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "runner_kind" varchar(100) NULL;
+            ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "runner_version" varchar(100) NULL;
+            ALTER TABLE IF EXISTS "sys_ai_task_run" ADD COLUMN IF NOT EXISTS "agent_session_id" varchar(200) NULL;
 
             CREATE TABLE IF NOT EXISTS "sys_ai_task_run_event" (
                 "basic_id" int8 NOT NULL,

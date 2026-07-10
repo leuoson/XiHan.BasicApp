@@ -234,6 +234,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AiTaskPromptRenderer>();
         services.AddScoped<AiTaskExecutor>();
         services.TryAddSingleton(TimeProvider.System);
+        services.AddOptions<AiTaskRuntimeOptions>().BindConfiguration(AiTaskRuntimeOptions.SectionName);
+        services.AddScoped<IAiTaskAgentRunner, PlainChatAiTaskRunner>();
+        services.AddScoped<AiTaskRunnerResolver>();
         services.AddScoped<IAiTaskRunQueue, AiTaskRedisRunQueue>();
         services.AddScoped<AiTaskRunRecoveryService>();
         services.AddScoped<IAiTaskRunEventService, AiTaskRunEventService>();

@@ -342,6 +342,9 @@ public static class AiTaskApplicationMapper
             LeaseOwner = entity.LeaseOwner,
             LeaseExpiresAt = entity.LeaseExpiresAt,
             LastHeartbeatTime = entity.LastHeartbeatTime,
+            RunnerKind = entity.RunnerKind,
+            RunnerVersion = entity.RunnerVersion,
+            AgentSessionId = entity.AgentSessionId,
             PromptSnapshot = entity.PromptSnapshot,
             ResultText = entity.ResultText
         };

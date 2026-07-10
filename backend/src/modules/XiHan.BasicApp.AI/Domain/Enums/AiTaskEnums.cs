@@ -279,3 +279,27 @@ public enum AiTaskRunGuidanceStatus
     [Description("已忽略")]
     Ignored = 2
 }
+
+/// <summary>
+/// AI 任务运行器类型
+/// </summary>
+public enum AiTaskRunnerKind
+{
+    /// <summary>
+    /// 普通聊天
+    /// </summary>
+    [Description("普通聊天")]
+    PlainChat = 0,
+
+    /// <summary>
+    /// Microsoft Agent Framework
+    /// </summary>
+    [Description("Microsoft Agent Framework")]
+    MicrosoftAgentFramework = 1,
+
+    /// <summary>
+    /// Semantic Kernel Agent
+    /// </summary>
+    [Description("Semantic Kernel Agent")]
+    SemanticKernelAgent = 2
+}

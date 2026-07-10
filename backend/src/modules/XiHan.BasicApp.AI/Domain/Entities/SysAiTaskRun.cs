@@ -97,6 +97,24 @@ public partial class SysAiTaskRun : BasicAppFullAuditedEntity
     public virtual int AttemptCount { get; set; }
 
     /// <summary>
+    /// 运行器类型
+    /// </summary>
+    [SugarColumn(ColumnName = "Runner_Kind", ColumnDescription = "运行器类型", Length = 100, IsNullable = true)]
+    public virtual string? RunnerKind { get; set; }
+
+    /// <summary>
+    /// 运行器版本
+    /// </summary>
+    [SugarColumn(ColumnName = "Runner_Version", ColumnDescription = "运行器版本", Length = 100, IsNullable = true)]
+    public virtual string? RunnerVersion { get; set; }
+
+    /// <summary>
+    /// Agent 会话标识
+    /// </summary>
+    [SugarColumn(ColumnName = "Agent_Session_Id", ColumnDescription = "Agent会话标识", Length = 200, IsNullable = true)]
+    public virtual string? AgentSessionId { get; set; }
+
+    /// <summary>
     /// 提示词快照
     /// </summary>
     [SugarColumn(ColumnName = "Prompt_Snapshot", ColumnDescription = "提示词快照", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
