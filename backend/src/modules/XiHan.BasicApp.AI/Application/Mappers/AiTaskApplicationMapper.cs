@@ -368,6 +368,26 @@ public static class AiTaskApplicationMapper
     }
 
     /// <summary>
+    /// 运行引导实体映射为 DTO
+    /// </summary>
+    public static AiTaskRunGuidanceDto ToRunGuidanceDto(SysAiTaskRunGuidance entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        return new AiTaskRunGuidanceDto
+        {
+            BasicId = entity.BasicId,
+            RunId = entity.RunId,
+            Content = entity.Content,
+            Status = entity.Status,
+            ClientRequestId = entity.ClientRequestId,
+            AppliedTime = entity.AppliedTime,
+            IgnoredReason = entity.IgnoredReason,
+            CreatedTime = entity.CreatedTime
+        };
+    }
+
+    /// <summary>
     /// 获取内部 SysTask 编码
     /// </summary>
     public static string ToBackingTaskCode(string aiTaskCode)

@@ -83,6 +83,24 @@ public sealed class AiTaskRunDto : BasicAppDto
 {
 }
 
+public sealed class AiTaskAppendGuidanceDto
+{
+    public long RunId { get; set; }
+    public string Content { get; set; } = string.Empty;
+    public string? ClientRequestId { get; set; }
+}
+
+public sealed class AiTaskRunGuidanceDto : BasicAppDto
+{
+    public long RunId { get; set; }
+    public string Content { get; set; } = string.Empty;
+    public AiTaskRunGuidanceStatus Status { get; set; }
+    public string? ClientRequestId { get; set; }
+    public DateTimeOffset? AppliedTime { get; set; }
+    public string? IgnoredReason { get; set; }
+    public DateTimeOffset CreatedTime { get; set; }
+}
+
 public sealed class AiTaskToolPolicyInputDto
 {
     public long ToolId { get; set; }

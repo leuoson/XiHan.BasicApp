@@ -53,7 +53,10 @@ public sealed class AiTaskAppServiceRunTests
             }),
             new FakeAiTaskBackingTaskSyncService(),
             executor,
-            runQueue);
+            runQueue,
+            runRepository,
+            new InMemoryAiTaskRunGuidanceRepository(),
+            new InMemoryAiTaskRunEventRepository());
 
         var result = await appService.RunAsync(new AiTaskRunDto { BasicId = 7 });
 

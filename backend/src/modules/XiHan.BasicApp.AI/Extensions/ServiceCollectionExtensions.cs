@@ -228,6 +228,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAiTaskRepository, AiTaskRepository>();
         services.AddScoped<IAiTaskRunRepository, AiTaskRunRepository>();
         services.AddScoped<IAiTaskRunEventRepository, AiTaskRunEventRepository>();
+        services.AddScoped<IAiTaskRunGuidanceRepository, AiTaskRunGuidanceRepository>();
         services.AddScoped<IAiToolRepository, AiToolRepository>();
         services.AddScoped<IAiTaskToolPolicyRepository, AiTaskToolPolicyRepository>();
         services.AddScoped<AiTaskPromptRenderer>();

@@ -41,6 +41,9 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
     private readonly IAiTaskBackingTaskSyncService _backingTaskSyncService;
     private readonly AiTaskExecutor _executor;
     private readonly IAiTaskRunQueue _runQueue;
+    private readonly IAiTaskRunRepository _runRepository;
+    private readonly IAiTaskRunGuidanceRepository _guidanceRepository;
+    private readonly IAiTaskRunEventRepository _runEventRepository;
 
     /// <summary>
     /// 构造函数
@@ -52,7 +55,10 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         IAiToolRepository toolRepository,
         IAiTaskBackingTaskSyncService backingTaskSyncService,
         AiTaskExecutor executor,
-        IAiTaskRunQueue runQueue)
+        IAiTaskRunQueue runQueue,
+        IAiTaskRunRepository runRepository,
+        IAiTaskRunGuidanceRepository guidanceRepository,
+        IAiTaskRunEventRepository runEventRepository)
     {
         _taskDomainService = taskDomainService;
         _taskRepository = taskRepository;
@@ -61,6 +67,9 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         _backingTaskSyncService = backingTaskSyncService;
         _executor = executor;
         _runQueue = runQueue;
+        _runRepository = runRepository;
+        _guidanceRepository = guidanceRepository;
+        _runEventRepository = runEventRepository;
     }
 
     /// <inheritdoc />
@@ -128,6 +137,57 @@ public sealed class AiTaskAppService : AiApplicationService, IAiTaskAppService
         var run = await _executor.StartRunAsync(input.BasicId, cancellationToken);
         await _runQueue.EnqueueAsync(run.BasicId, cancellationToken);
         return AiTaskApplicationMapper.ToExecutionResultDto(AiTaskExecutionResult.Accepted(run.BasicId));
+    }
+
+    /// <inheritdoc />
+    [UnitOfWork(true)]
+    [PermissionAuthorize(AiTaskPermissionCodes.Execute)]
+    public async Task<AiTaskRunGuidanceDto> AppendRunGuidanceAsync(AiTaskAppendGuidanceDto input, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (input.RunId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(input), "AI 任务运行记录主键必须大于 0。");
+        }
+
+        var content = input.Content.Trim();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new InvalidOperationException("AI 任务运行引导不能为空。");
+        }
+
+        var existing = !string.IsNullOrWhiteSpace(input.ClientRequestId)
+            ? await _guidanceRepository.GetByClientRequestIdAsync(input.RunId, input.ClientRequestId.Trim(), cancellationToken)
+            : null;
+        if (existing is not null)
+        {
+            return AiTaskApplicationMapper.ToRunGuidanceDto(existing);
+        }
+
+        var run = await _runRepository.GetByIdAsync(input.RunId, cancellationToken)
+            ?? throw new InvalidOperationException("AI 任务运行记录不存在。");
+        if (run.RunStatus is not AiTaskRunStatus.Queued and not AiTaskRunStatus.Running)
+        {
+            throw new InvalidOperationException("AI 任务运行已结束，不能追加引导。");
+        }
+
+        var guidance = await _guidanceRepository.AddAsync(new SysAiTaskRunGuidance
+        {
+            RunId = input.RunId,
+            Content = content,
+            Status = AiTaskRunGuidanceStatus.Pending,
+            ClientRequestId = input.ClientRequestId
+        }, cancellationToken);
+
+        _ = await _runEventRepository.AddAsync(new SysAiTaskRunEvent
+        {
+            RunId = input.RunId,
+            EventType = AiTaskRunEventType.GuidanceReceived,
+            Role = AiTaskRunEventRole.User,
+            Content = content
+        }, cancellationToken);
+
+        return AiTaskApplicationMapper.ToRunGuidanceDto(guidance);
     }
 
     private async Task<AiTaskDetailDto> SaveAndMapDetailAsync(SysAiTask task, IReadOnlyList<AiTaskToolPolicyCommand> commands, CancellationToken cancellationToken)

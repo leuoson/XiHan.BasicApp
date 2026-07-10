@@ -440,6 +440,80 @@ internal sealed class InMemoryAiTaskRunEventRepository : IAiTaskRunEventReposito
     }
 }
 
+internal sealed class InMemoryAiTaskRunGuidanceRepository : IAiTaskRunGuidanceRepository
+{
+    public List<SysAiTaskRunGuidance> Guidance { get; } = [];
+
+    public Task<SysAiTaskRunGuidance> AddAsync(SysAiTaskRunGuidance entity, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (entity.BasicId <= 0)
+        {
+            entity = new SysAiTaskRunGuidance(Guidance.Count + 1)
+            {
+                RunId = entity.RunId,
+                Content = entity.Content.Trim(),
+                Status = entity.Status,
+                ClientRequestId = string.IsNullOrWhiteSpace(entity.ClientRequestId) ? null : entity.ClientRequestId.Trim(),
+                AppliedTime = entity.AppliedTime,
+                IgnoredReason = entity.IgnoredReason,
+                CreatedTime = entity.CreatedTime == default ? DateTimeOffset.Now : entity.CreatedTime
+            };
+        }
+
+        Guidance.Add(entity);
+        return Task.FromResult(entity);
+    }
+
+    public Task<SysAiTaskRunGuidance?> GetByClientRequestIdAsync(long runId, string clientRequestId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Guidance.FirstOrDefault(g => g.RunId == runId && g.ClientRequestId == clientRequestId.Trim()));
+    }
+
+    public Task<IReadOnlyList<SysAiTaskRunGuidance>> GetByRunIdAsync(long runId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<SysAiTaskRunGuidance>>(Guidance
+            .Where(g => g.RunId == runId)
+            .OrderBy(g => g.CreatedTime)
+            .ToList());
+    }
+
+    public Task<IReadOnlyList<SysAiTaskRunGuidance>> GetPendingByRunIdAsync(long runId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IReadOnlyList<SysAiTaskRunGuidance>>(Guidance
+            .Where(g => g.RunId == runId && g.Status == AiTaskRunGuidanceStatus.Pending)
+            .OrderBy(g => g.CreatedTime)
+            .ToList());
+    }
+
+    public Task MarkAppliedAsync(IReadOnlyList<long> ids, DateTimeOffset appliedTime, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var guidance in Guidance.Where(g => ids.Contains(g.BasicId) && g.Status == AiTaskRunGuidanceStatus.Pending))
+        {
+            guidance.Status = AiTaskRunGuidanceStatus.Applied;
+            guidance.AppliedTime = appliedTime;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task MarkIgnoredAsync(IReadOnlyList<long> ids, string reason, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var guidance in Guidance.Where(g => ids.Contains(g.BasicId) && g.Status == AiTaskRunGuidanceStatus.Pending))
+        {
+            guidance.Status = AiTaskRunGuidanceStatus.Ignored;
+            guidance.IgnoredReason = reason;
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
 internal sealed class InMemoryAiToolRepository : IAiToolRepository
 {
     public SysAiTool Tool { get; }

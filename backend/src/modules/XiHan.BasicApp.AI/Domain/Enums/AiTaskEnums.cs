@@ -255,3 +255,27 @@ public enum AiTaskRunEventRole
     [Description("工具")]
     Tool = 3
 }
+
+/// <summary>
+/// AI 任务运行引导状态
+/// </summary>
+public enum AiTaskRunGuidanceStatus
+{
+    /// <summary>
+    /// 待应用
+    /// </summary>
+    [Description("待应用")]
+    Pending = 0,
+
+    /// <summary>
+    /// 已应用
+    /// </summary>
+    [Description("已应用")]
+    Applied = 1,
+
+    /// <summary>
+    /// 已忽略
+    /// </summary>
+    [Description("已忽略")]
+    Ignored = 2
+}

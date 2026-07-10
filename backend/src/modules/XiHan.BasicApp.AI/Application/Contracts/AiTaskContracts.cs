@@ -47,6 +47,11 @@ public interface IAiTaskAppService : IApplicationService
     /// 立即执行一次 AI 任务
     /// </summary>
     Task<AiTaskExecutionResultDto> RunAsync(AiTaskRunDto input, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 追加运行引导
+    /// </summary>
+    Task<AiTaskRunGuidanceDto> AppendRunGuidanceAsync(AiTaskAppendGuidanceDto input, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

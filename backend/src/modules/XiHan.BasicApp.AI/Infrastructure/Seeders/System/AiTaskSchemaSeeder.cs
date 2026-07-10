@@ -100,6 +100,29 @@ public sealed class AiTaskSchemaSeeder : DataSeederBase
             CREATE INDEX IF NOT EXISTS "ix_sys_ai_task_run_event_tenant_run_seq"
                 ON "sys_ai_task_run_event" ("tenant_id", "run_id", "sequence");
 
+            CREATE TABLE IF NOT EXISTS "sys_ai_task_run_guidance" (
+                "basic_id" int8 NOT NULL,
+                "tenant_id" int8 NOT NULL DEFAULT 0,
+                "created_time" timestamptz NOT NULL DEFAULT now(),
+                "created_by" int8 NULL,
+                "modified_time" timestamptz NULL,
+                "modified_by" int8 NULL,
+                "is_deleted" bool NOT NULL DEFAULT false,
+                "deleted_time" timestamptz NULL,
+                "deleted_by" int8 NULL,
+                "run_id" int8 NOT NULL,
+                "content" text NOT NULL,
+                "status" int4 NOT NULL DEFAULT 0,
+                "client_request_id" varchar(100) NULL,
+                "applied_time" timestamptz NULL,
+                "ignored_reason" varchar(500) NULL,
+                CONSTRAINT "pk_sys_ai_task_run_guidance" PRIMARY KEY ("basic_id")
+            );
+            CREATE INDEX IF NOT EXISTS "ix_sys_ai_task_run_guidance_tenant_run_created"
+                ON "sys_ai_task_run_guidance" ("tenant_id", "run_id", "created_time");
+            CREATE INDEX IF NOT EXISTS "ix_sys_ai_task_run_guidance_tenant_run_client"
+                ON "sys_ai_task_run_guidance" ("tenant_id", "run_id", "client_request_id");
+
             ALTER TABLE IF EXISTS "sys_ai_task_tool_policy" ADD COLUMN IF NOT EXISTS "ai_task_id" int8 NOT NULL DEFAULT 0;
             ALTER TABLE IF EXISTS "sys_ai_task_tool_policy" ADD COLUMN IF NOT EXISTS "tool_id" int8 NOT NULL DEFAULT 0;
             ALTER TABLE IF EXISTS "sys_ai_task_tool_policy" ADD COLUMN IF NOT EXISTS "remark" varchar(500) NULL;
