@@ -1,8 +1,11 @@
 ![logo](./assets/logo.png)
 
+[![GitHub Star](https://img.shields.io/github/stars/XiHanFun/XiHan.BasicApp?style=flat&logo=github)](https://github.com/XiHanFun/XiHan.BasicApp) | [![Gitee Star](https://gitee.com/XiHanFun/XiHan.BasicApp/badge/star.svg)](https://gitee.com/XiHanFun/XiHan.BasicApp) | [![AtomGit Star](https://atomgit.com/XiHanFun/XiHan.BasicApp/star/badge.svg)](https://atomgit.com/XiHanFun/XiHan.BasicApp)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/XiHanFun/XiHan.BasicApp)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/) | [![NuGet](https://img.shields.io/nuget/v/XiHan.BasicApp.Core?label=NuGet&color=blue)](https://www.nuget.org/packages?q=XiHan.BasicApp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-QQ 交流群：[462371834](https://qm.qq.com/q/qYp1Urv3z2)
+[曦寒懿官方交流群](https://qm.qq.com/q/qYp1Urv3z2) 462371834 | [在线文档](https://docs.xihanfun.com)
 
 # XiHan.BasicApp
 
@@ -30,9 +33,11 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
     <td align="center"><img src="./assets/operation-log.png" /><br/>操作日志</td>
   </tr>
   <tr>
+    <td align="center"><img src="./assets/log-traceability.png" /><br/>日志链路</td>
     <td align="center"><img src="./assets/about.png" /><br/>关于</td>
   </tr>
 </table>
+
 
 
 移动端：
@@ -266,12 +271,8 @@ sudo systemctl start XiHan.BasicApp
 
 如果此项目对你的开发有助益，也欢迎请作者一杯咖啡。
 
-<table>
-  <tr>
-    <td align="center"><img src="./assets/alipay.png" width="200" /><br/>支付宝</td>
-    <td align="center"><img src="./assets/weixinpay.png" width="200" /><br/>微信</td>
-  </tr>
-</table>
+官方赞助页 https://docs.xihanfun.com/cosmos/sponsor
+
 
 ## 版权&授权
 

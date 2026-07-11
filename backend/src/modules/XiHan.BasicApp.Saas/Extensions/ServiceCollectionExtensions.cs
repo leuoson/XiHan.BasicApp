@@ -14,6 +14,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using XiHan.BasicApp.Saas.Application.Authorization;
 using XiHan.BasicApp.Saas.Application.Caching;
 using XiHan.BasicApp.Saas.Application.EventHandlers;
 using XiHan.BasicApp.Saas.Application.Exporting;
@@ -39,7 +40,7 @@ using XiHan.Framework.Bot.Sms.Abstractions;
 using XiHan.Framework.Bot.Telegram.Abstractions;
 using XiHan.Framework.Bot.Telegram.Extensions.DependencyInjection;
 using XiHan.Framework.Bot.WeCom.Abstractions;
-using XiHan.Framework.Data.Auditing;
+using XiHan.Framework.Auditing;
 using XiHan.Framework.Data.Extensions.DependencyInjection;
 using XiHan.Framework.Data.SqlSugar.Tenanting;
 using XiHan.Framework.EventBus.Local;
@@ -47,7 +48,7 @@ using XiHan.Framework.Messaging.Abstractions;
 using XiHan.Framework.Security.Services;
 using XiHan.Framework.Tasks.ScheduledJobs.Abstractions;
 using XiHan.Framework.Utils.Collections;
-using XiHan.Framework.Web.Api.Logging.Writers;
+using XiHan.Framework.Auditing.Writers;
 
 namespace XiHan.BasicApp.Saas.Extensions;
 
@@ -191,6 +192,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICacheManagementService, CacheManagementService>();
         services.AddScoped<ISaasConfigurationService, SaasConfigurationService>();
         services.AddScoped<ISaasCacheInvalidator, SaasCacheInvalidator>();
+        services.AddScoped<IAuthorizationChangeNotifier, AuthorizationChangeNotifier>();
         return services;
     }
 
@@ -224,6 +226,7 @@ public static class ServiceCollectionExtensions
 
         // 授权事件
         services.AddSaasLocalEventHandler<AuthorizationChangedEventHandler>();
+        services.AddSaasLocalEventHandler<PermissionChangeLogEventHandler>();
         services.AddSaasLocalEventHandler<DataScopeChangedEventHandler>();
         services.AddSaasLocalEventHandler<FieldLevelSecurityChangedEventHandler>();
 

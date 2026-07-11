@@ -5,15 +5,19 @@ import type { ListFieldSchema, PageSchema, SchemaActionPayload, SchemaQueryParam
 import { NTag, useMessage } from 'naive-ui'
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { createPageRequest, logManagementApi, OperationExecuteResult, OperationType, querySortsFromSchema } from '@/api'
 import { SchemaPage } from '~/components'
 import { getOptionLabel } from '~/utils'
+import { operationLogDetailFields } from '../_components/log-detail-fields'
 import LogDetailDrawer from '../_components/LogDetailDrawer.vue'
+import { decorateTraceFields, gotoTrace } from '../_components/trace-nav'
 
 defineOptions({ name: 'LogOperationPage' })
 
 const { t } = useI18n()
 const message = useMessage()
+const router = useRouter()
 
 const detailVisible = ref(false)
 const detailLoading = ref(false)
@@ -143,47 +147,28 @@ const schema = computed<PageSchema>(() => ({
   pageName: t('log.operation.page_name'),
   rowKey: 'basicId',
   scrollX: 2200,
-  fields: fields.value,
+  fields: decorateTraceFields(fields.value, router, { timeField: 'operationTime', ipKey: 'operationIp' }),
   resource: {
     page: params => logManagementApi.operation.page(buildOperationQuery(params)) as unknown as Promise<PageResult<Record<string, unknown>>>,
     export: { businessType: 'log.operation', buildQuery: buildOperationQuery },
   },
   actions: [
     { key: 'view', title: t('common.actions.view_detail'), scope: 'row', icon: 'lucide:eye' },
+    { key: 'trace', title: t('log.trace.action'), scope: 'row', icon: 'lucide:route' },
   ],
 }))
 
-const detailFields = computed<LogDetailField[]>(() => [
-  { key: 'basicId', label: t('log.common.basic_id') },
-  { key: 'sessionId', label: t('log.common.session_id') },
-  { key: 'traceId', label: t('log.common.trace_id') },
-  { key: 'userName', label: t('log.common.user_name') },
-  { key: 'userId', label: t('log.common.user_id') },
-  { key: 'operationType', label: t('log.operation.operation_type'), options: operationTypeOptions.value, type: 'enum' },
-  { key: 'result', label: t('log.operation.result'), options: resultOptions.value, type: 'enum' },
-  { key: 'module', label: t('log.operation.module') },
-  { key: 'function', label: t('log.operation.function') },
-  { key: 'title', label: t('log.operation.title'), span: 2 },
-  { key: 'description', label: t('log.operation.description'), span: 2 },
-  { key: 'method', label: t('log.common.method') },
-  { key: 'requestUrl', label: t('log.operation.request_url'), span: 2 },
-  { key: 'executionTime', label: t('log.common.execution_time'), type: 'duration' },
-  { key: 'operationIp', label: t('log.operation.operation_ip') },
-  { key: 'operationLocation', label: t('log.operation.operation_location') },
-  { key: 'browser', label: t('log.common.browser') },
-  { key: 'os', label: t('log.common.os') },
-  { key: 'operationTime', label: t('log.operation.operation_time'), type: 'date' },
-  { key: 'createdTime', label: t('common.fields.created_time'), type: 'date' },
-  { key: 'createdId', label: t('log.common.created_id') },
-  { key: 'createdBy', label: t('common.fields.created_by') },
-  { key: 'userAgent', label: t('log.common.user_agent'), type: 'code' },
-  { key: 'errorMessage', label: t('log.common.error_message'), type: 'code' },
-])
+const detailFields = computed<LogDetailField[]>(() => operationLogDetailFields(t))
 
 function onAction(payload: SchemaActionPayload) {
   const row = payload.row as unknown as OperationLogListItemDto | undefined
   if (payload.key === 'view' && row) {
     void handleDetail(row)
+  }
+  else if (payload.key === 'trace' && row) {
+    if (!gotoTrace(router, row, row.operationTime)) {
+      message.warning(t('log.trace.value_required'))
+    }
   }
 }
 

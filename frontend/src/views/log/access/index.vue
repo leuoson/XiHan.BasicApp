@@ -5,15 +5,19 @@ import type { ListFieldSchema, PageSchema, SchemaActionPayload, SchemaQueryParam
 import { NTag, useMessage } from 'naive-ui'
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { AccessResult, createPageRequest, logManagementApi, querySortsFromSchema } from '@/api'
 import { SchemaPage } from '~/components'
 import { getOptionLabel } from '~/utils'
+import { accessLogDetailFields } from '../_components/log-detail-fields'
 import LogDetailDrawer from '../_components/LogDetailDrawer.vue'
+import { decorateTraceFields, gotoTrace } from '../_components/trace-nav'
 
 defineOptions({ name: 'LogAccessPage' })
 
 const { t } = useI18n()
 const message = useMessage()
+const router = useRouter()
 
 const detailVisible = ref(false)
 const detailLoading = ref(false)
@@ -139,49 +143,28 @@ const schema = computed<PageSchema>(() => ({
   pageName: t('log.access.page_name'),
   rowKey: 'basicId',
   scrollX: 2200,
-  fields: fields.value,
+  fields: decorateTraceFields(fields.value, router, { timeField: 'accessTime', ipKey: 'accessIp' }),
   resource: {
     page: params => logManagementApi.access.page(buildAccessQuery(params)) as unknown as Promise<PageResult<Record<string, unknown>>>,
     export: { businessType: 'log.access', buildQuery: buildAccessQuery },
   },
   actions: [
     { key: 'view', title: t('common.actions.view_detail'), scope: 'row', icon: 'lucide:eye' },
+    { key: 'trace', title: t('log.trace.action'), scope: 'row', icon: 'lucide:route' },
   ],
 }))
 
-const detailFields = computed<LogDetailField[]>(() => [
-  { key: 'basicId', label: t('log.common.basic_id') },
-  { key: 'sessionId', label: t('log.common.session_id') },
-  { key: 'traceId', label: t('log.common.trace_id') },
-  { key: 'userName', label: t('log.common.user_name') },
-  { key: 'userId', label: t('log.common.user_id') },
-  { key: 'resourcePath', label: t('log.access.resource_path'), span: 2 },
-  { key: 'resourceName', label: t('log.access.resource_name') },
-  { key: 'resourceType', label: t('log.access.resource_type') },
-  { key: 'method', label: t('log.common.method') },
-  { key: 'statusCode', label: t('log.common.status_code') },
-  { key: 'accessResult', label: t('log.access.access_result'), options: accessResultOptions.value, type: 'enum' },
-  { key: 'executionTime', label: t('log.common.execution_time'), type: 'duration' },
-  { key: 'accessIp', label: t('log.access.access_ip') },
-  { key: 'accessLocation', label: t('log.access.access_location') },
-  { key: 'browser', label: t('log.common.browser') },
-  { key: 'os', label: t('log.common.os') },
-  { key: 'device', label: t('log.common.device') },
-  { key: 'referer', label: t('log.common.referer'), span: 2 },
-  { key: 'accessTime', label: t('log.access.access_time'), type: 'date' },
-  { key: 'createdTime', label: t('common.fields.created_time'), type: 'date' },
-  { key: 'createdId', label: t('log.common.created_id') },
-  { key: 'createdBy', label: t('common.fields.created_by') },
-  { key: 'remark', label: t('common.fields.remark'), span: 2 },
-  { key: 'userAgent', label: t('log.common.user_agent'), type: 'code' },
-  { key: 'errorMessage', label: t('log.common.error_message'), type: 'code' },
-  { key: 'extendData', label: t('log.common.extend_data'), type: 'code' },
-])
+const detailFields = computed<LogDetailField[]>(() => accessLogDetailFields(t))
 
 function onAction(payload: SchemaActionPayload) {
   const row = payload.row as unknown as AccessLogListItemDto | undefined
   if (payload.key === 'view' && row) {
     void handleDetail(row)
+  }
+  else if (payload.key === 'trace' && row) {
+    if (!gotoTrace(router, row, row.accessTime)) {
+      message.warning(t('log.trace.value_required'))
+    }
   }
 }
 
