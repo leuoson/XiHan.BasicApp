@@ -58,7 +58,7 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 - 权限码 `resource:action:scope`，超级管理员通配 `*:*:*`
 - 角色层级继承（闭包表）、数据范围（本人 / 部门 / 租户）、字段级脱敏
 - ABAC 约束规则（时间窗 / IP / 表达式）、会话角色激活（动态职责分离）
-- 权限申请审批与变更留痕
+- 权限申请审批、权限委托（临时授权、可撤销）与变更留痕
 
 **多租户**
 
@@ -71,11 +71,19 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 
 - 访问 / API / 操作 / 异常 / 登录 / 实体变更 六类日志，各自独立写入
 - 落库前自动脱敏（密码、令牌、密钥、证件号等）；实体变更区分新增 / 修改 / 删除 / 恢复
+- 链路追踪时间线：按 TraceId 跨六类日志聚合，时间倒序还原一次请求的完整轨迹
 
 **代码生成**
 
 - 单表 / 树形 / 主从三种模式，从实体、DTO、API 到前端页面一键生成
 - 基于 Scriban 模板，支持自定义；Zip 下载或直接写入文件
+
+**AI 能力**
+
+- AI 提供商接入与密钥托管（DataProtection 加密保护，Chat / Embedding 模型可配置）
+- 提示词库：数据库存储、可替换框架默认提示词
+- 知识库 RAG：文档摄取、向量检索（Qdrant），租户级知识库管理
+- AI 技能注册即自动暴露为对话工具与 MCP 工具（知识检索技能等）
 
 **平台能力**
 
@@ -84,6 +92,8 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 - 全链路分布式缓存（授权快照、版本门控、菜单、配置、字典），写路径精准失效
 - 网关灰度发布（百分比 / 白名单 / 租户 / 请求头）、请求追踪、限流熔断
 - 消息模板（邮件 / 短信 / 站内通知，Scriban 渲染，租户可覆盖默认）、SignalR 实时通知与在线聊天
+- 开放平台：内置 OAuth2/OIDC 身份提供方（第三方应用注册、用户同意授权），个人级 OpenAPI 凭证（AppKey/AppSecret 签名调用）
+- 服务器信息监控（主板 / CPU / 内存 / 磁盘 / GPU / 网络 / 运行时）、缓存键查询与清理
 - 文件多存储（本地 / S3 / OSS / COS / MinIO）、定时任务、审核工作流、国际化（中 / 英）
 
 **前端体验**
@@ -103,7 +113,7 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 | 技术 | 说明 |
 | --- | --- |
 | .NET 10 / C# | 运行时与语言 |
-| XiHan.Framework 2.5.x | 自研模块化应用框架 |
+| XiHan.Framework 3.5.0 | 自研模块化应用框架 |
 | SqlSugar | ORM，支持 PostgreSQL / MySQL / MariaDB |
 | Redis | 分布式缓存与分布式锁 |
 | SignalR | 实时通信 |
@@ -115,8 +125,8 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 | 技术 | 说明 |
 | --- | --- |
 | Vue 3.5+ | UI 框架 |
-| TypeScript 5.9+ | 类型系统 |
-| Vite 6 | 构建工具 |
+| TypeScript 6.0+ | 类型系统 |
+| Vite 8 | 构建工具 |
 | Naive UI | 组件库 |
 | Pinia | 状态管理 |
 | Tailwind CSS 4 | 原子化 CSS |
@@ -131,10 +141,11 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 ┌─────────────────────────────────────────────────────────────┐
 │                   XiHan.BasicApp.WebHost                      │
 │                   (启动入口与模块聚合)                          │
-├──────────────────────────────┬──────────────────────────────┤
-│  XiHan.BasicApp.Saas         │  XiHan.BasicApp.CodeGeneration│
-│  (RBAC / 多租户 / 审计)       │  (代码生成与模板管理)           │
-├──────────────────────────────┴──────────────────────────────┤
+├────────────────────┬────────────────────┬───────────────────┤
+│ XiHan.BasicApp.Saas│ XiHan.BasicApp.    │ XiHan.BasicApp.AI │
+│ (RBAC/多租户/审计)      │ CodeGeneration     │ (AI/提示词/RAG)      │
+│                    │ (代码生成与模板)          │                   │
+├────────────────────┴────────────────────┴───────────────────┤
 │                   XiHan.BasicApp.Web.Core                     │
 │              (Web 核心能力 / 动态 API / 网关 / 灰度)            │
 ├─────────────────────────────────────────────────────────────┤
@@ -152,6 +163,7 @@ XiHan.BasicApp 采用前后端分离架构。后端遵循 DDD 分层与 CQRS，�
 | `XiHan.BasicApp.Web.Core` | Web 核心能力，动态 API / Scalar / SignalR / 网关 / 灰度路由 |
 | `XiHan.BasicApp.Saas` | 核心业务模块：用户 / 角色 / 权限 / 菜单 / 部门 / 租户 / 配置 / 字典 / 文件 / 通知 / 日志 / 任务 |
 | `XiHan.BasicApp.CodeGeneration` | 代码生成：数据源管理 / 表结构导入 / 模板配置 / 全栈生成 |
+| `XiHan.BasicApp.AI` | AI 能力：提供商与密钥管理 / 提示词库 / 知识库 RAG / AI 技能（MCP 工具） |
 | `XiHan.BasicApp.WebHost` | 启动入口，聚合所有模块 |
 
 ```text
@@ -159,7 +171,7 @@ XiHan.BasicApp/
 ├── backend/                 # 后端（.NET 10）
 │   ├── src/
 │   │   ├── framework/       #   Core / Web.Core 基础能力
-│   │   ├── modules/         #   Saas、CodeGeneration 模块
+│   │   ├── modules/         #   Saas、CodeGeneration、AI 模块
 │   │   └── main/            #   WebHost 启动入口
 │   ├── props/               #   共享 MSBuild 属性
 │   ├── scripts/             #   部署与运维脚本
@@ -177,8 +189,8 @@ XiHan.BasicApp/
 | 依赖 | 版本 |
 | --- | --- |
 | .NET SDK | 10.0+ |
-| Node.js | 20.0+ |
-| pnpm | 9.0+ |
+| Node.js | 24.0+ |
+| pnpm | 11.0+ |
 | PostgreSQL | 14+（或 MySQL / MariaDB） |
 | Redis | 6.0+ |
 
@@ -232,14 +244,15 @@ pnpm dev
 
 ## 部署
 
-### Linux（systemd）
+### Linux（Supervisor）
 
 ```bash
-dotnet publish backend/src/main/XiHan.BasicApp.WebHost -c Release -o /opt/xihan-basicapp
+dotnet publish backend/src/main/XiHan.BasicApp.WebHost -c Release -o /home/basicappapi
 
-sudo cp backend/scripts/service/XiHan.BasicApp.service /etc/systemd/system/
-sudo systemctl enable XiHan.BasicApp
-sudo systemctl start XiHan.BasicApp
+sudo cp backend/scripts/service/XiHan.BasicApp.ini /etc/supervisor/conf.d/
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start XiHanBasicApp
 ```
 
 ### Windows
@@ -248,7 +261,7 @@ sudo systemctl start XiHan.BasicApp
 
 ## 版本
 
-后端与前端当前版本：v2.3.1。
+后端与前端当前版本：v3.5.0。
 
 ## 诚挚致谢
 
@@ -272,6 +285,10 @@ sudo systemctl start XiHan.BasicApp
 如果此项目对你的开发有助益，也欢迎请作者一杯咖啡。
 
 官方赞助页 https://docs.xihanfun.com/cosmos/sponsor
+
+## 关注动态
+
+![weixinmp](./assets/weixinmp.png)
 
 
 ## 版权&授权

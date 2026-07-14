@@ -405,7 +405,6 @@ export default {
       err_load_failed: '加载租户列表失败',
       msg_switched_to: '已切换到「{label}」',
       err_switch_failed: '切换失败',
-      tenant_initial_fallback: '租',
       section_title: '我的租户',
       section_desc: '您当前可访问的租户组织及其成员角色',
       empty: '暂无可访问的租户',
@@ -421,6 +420,7 @@ export default {
     tag_modern_stack: 'Modern Stack',
     sub_build_time: 'Build Time',
     sub_official_site: 'Official Site',
+    sub_docs: 'Documentation',
     sub_source_repo: 'Source Repository',
     core_capabilities: '核心能力',
     cap_security_title: '安全与权限',
@@ -440,6 +440,16 @@ export default {
     backend_dependencies: '后端生产环境依赖 (NuGet)',
     frontend_dependencies: '前端生产环境依赖 (NPM)',
     frontend_dev_dependencies: '前端开发环境依赖 (NPM)',
+  },
+  logo_upload: {
+    preview: '图片预览',
+    select: '上传图片',
+    change: '更换图片',
+    remove: '移除',
+    hint: '支持 PNG/JPG/SVG/WEBP/ICO，大小不超过 {size}MB',
+    success: '上传成功',
+    failed: '上传失败',
+    too_large: '图片大小不能超过 {size}MB',
   },
   rich_text_editor: {
     placeholder: '请输入内容...',
@@ -476,9 +486,6 @@ export default {
   },
   md_editor: {
     placeholder: '请输入 Markdown 内容...',
-  },
-  json_viewer: {
-    title: '数据预览',
   },
   schema_page: {
     actions_column: '操作',
@@ -596,16 +603,6 @@ export default {
     fixed_tip: '固定：{label}',
     hint: '勾选=显示该列；列宽可在此输入或拖动表头右边框调整（留空为自动）；点钉选图标在「左 / 右 / 不固定」间循环；拖拽手柄可排序',
   },
-  schema_view_manager: {
-    set_default: '设为默认',
-    remove_view: '删除视图',
-    select_placeholder: '搜索方案',
-    save_view: '保存方案',
-    manage_aria: '方案管理',
-    save_modal_title: '保存搜索方案',
-    name_placeholder: '请输入方案名称',
-    warn_name_required: '请输入方案名称',
-  },
   icon_picker: {
     select_placeholder: '选择图标',
     modal_title: '选择图标',
@@ -666,7 +663,6 @@ export default {
     every_step: '每',
     to: '至',
     specific_placeholder: '选择{unit}',
-    expression: '表达式',
     preview: '最近 {count} 次执行',
     preview_none: '无法计算（表达式无效或近期无匹配）',
     week_names: '周日,周一,周二,周三,周四,周五,周六',
